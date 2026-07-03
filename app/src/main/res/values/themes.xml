@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 纯 Compose 应用：使用框架自带无 ActionBar 主题作为 Activity 主题，
+         实际界面配色由 Compose MaterialTheme 控制。 -->
+    <style name="Theme.AccountingApp" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
