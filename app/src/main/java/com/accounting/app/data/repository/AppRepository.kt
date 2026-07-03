@@ -14,6 +14,7 @@ import com.accounting.app.data.remote.DeepSeekModels
 import com.accounting.app.data.remote.RetrofitClient
 import com.accounting.app.data.remote.model.ChatMessage
 import com.accounting.app.data.remote.model.ChatRequest
+import com.accounting.app.util.AppLogger
 import com.accounting.app.util.TimeUtils
 import com.accounting.app.data.local.pref.PersistedMessage
 import com.accounting.app.util.AmountUtils
@@ -111,11 +112,61 @@ class AppRepository(private val context: Context) {
 
     // ===================== 数据库操作代理 =====================
 
-    /** 新增支出记录，返回自增 id */
-    suspend fun insertExpense(entity: ExpenseEntity): Long = expenseDao.insert(entity)
+    /**
+     * 新增支出记录，返回自增 id。
+     *
+     * 节点7「入库执行」埋点：打印执行结果（成功/失败）、入库条数、账单ID；失败时打印异常堆栈。
+     *
+     * @param requestId 请求唯一ID（无默认值）
+     * @param billIndex 笔序号（多笔场景下从 1 开始，单笔场景可传 null）
+     */
+    suspend fun insertExpense(entity: ExpenseEntity, requestId: String, billIndex: Int? = null): Long {
+        return try {
+            val id = expenseDao.insert(entity)
+            if (billIndex != null) {
+                AppLogger.i(requestId, "入库执行", "结果：成功，账单ID：$id，类型：expense，金额：${entity.amount}分", billIndex)
+            } else {
+                AppLogger.i(requestId, "入库执行", "结果：成功，账单ID：$id，类型：expense，金额：${entity.amount}分")
+            }
+            id
+        } catch (e: Exception) {
+            val msg = "结果：失败，类型：expense，金额：${entity.amount}分，异常：${e.message}"
+            if (billIndex != null) {
+                AppLogger.e(requestId, "入库执行", msg, e, billIndex)
+            } else {
+                AppLogger.e(requestId, "入库执行", msg, e)
+            }
+            throw e
+        }
+    }
 
-    /** 新增收入记录，返回自增 id */
-    suspend fun insertIncome(entity: IncomeEntity): Long = incomeDao.insert(entity)
+    /**
+     * 新增收入记录，返回自增 id。
+     *
+     * 节点7「入库执行」埋点。
+     *
+     * @param requestId 请求唯一ID（无默认值）
+     * @param billIndex 笔序号（多笔场景下从 1 开始，单笔场景可传 null）
+     */
+    suspend fun insertIncome(entity: IncomeEntity, requestId: String, billIndex: Int? = null): Long {
+        return try {
+            val id = incomeDao.insert(entity)
+            if (billIndex != null) {
+                AppLogger.i(requestId, "入库执行", "结果：成功，账单ID：$id，类型：income，金额：${entity.amount}分", billIndex)
+            } else {
+                AppLogger.i(requestId, "入库执行", "结果：成功，账单ID：$id，类型：income，金额：${entity.amount}分")
+            }
+            id
+        } catch (e: Exception) {
+            val msg = "结果：失败，类型：income，金额：${entity.amount}分，异常：${e.message}"
+            if (billIndex != null) {
+                AppLogger.e(requestId, "入库执行", msg, e, billIndex)
+            } else {
+                AppLogger.e(requestId, "入库执行", msg, e)
+            }
+            throw e
+        }
+    }
 
     /** 按 id 删除支出 */
     suspend fun deleteExpense(id: Long) = expenseDao.deleteById(id)
@@ -233,8 +284,8 @@ class AppRepository(private val context: Context) {
      *
      * @return 本地解析成功的记录列表，返回空列表表示无法本地解析（需降级AI）
      */
-    private suspend fun localParseRecords(rawInput: String): List<LocalResult> {
-        val segments = AmountUtils.extractAmounts(rawInput)
+    private suspend fun localParseRecords(rawInput: String, requestId: String): List<LocalResult> {
+        val segments = AmountUtils.extractAmounts(rawInput, requestId)
         if (segments.isEmpty()) return emptyList()
         if (segments.size > 10) return emptyList() // 超限走提示
 
@@ -242,9 +293,10 @@ class AppRepository(private val context: Context) {
         val globalTime = TimeUtils.simpleParseTime(rawInput)
 
         val results = mutableListOf<LocalResult>()
-        for (seg in segments) {
+        for ((index, seg) in segments.withIndex()) {
+            val billIndex = index + 1
             val cleanSegment = AmountUtils.cleanSegment(seg.textBefore)
-            val localRecord = parseSingleSegment(cleanSegment, seg.amountFen)
+            val localRecord = parseSingleSegment(cleanSegment, seg.amountFen, requestId, billIndex)
             if (localRecord != null) {
                 // 全局时间优先，单笔内时间词可覆盖
                 val finalTime = if (globalTime != null) {
@@ -265,15 +317,34 @@ class AppRepository(private val context: Context) {
      * 2. 时间规则匹配 → 返回时间对应餐饮分类（fromBuiltin=true, merchant=null）
      * 3. 内置场景词匹配 → 返回场景对应分类（fromBuiltin=true, merchant=null）
      * 4. 全部未命中 → 返回 null（降级AI）
+     *
+     * 节点4「分类匹配」埋点：打印待匹配文本、命中的触发词、来源(user/seed)、基础分类、时段规则命中情况、最终分类结果。
      */
-    private suspend fun parseSingleSegment(textBefore: String, amountFen: Long): LocalResult? {
+    private suspend fun parseSingleSegment(
+        textBefore: String,
+        amountFen: Long,
+        requestId: String,
+        billIndex: Int
+    ): LocalResult? {
         val cleanText = AmountUtils.filterStopWords(textBefore)
 
         // 第1层：用户记忆匹配（最高优先级）
-        val probableType = preJudgeType(cleanText)
-        val memory = matchMemory(cleanText, probableType)
+        val probableType = preJudgeType(cleanText, requestId, billIndex)
+        val memory = matchMemory(cleanText, probableType, requestId, billIndex)
         if (memory != null) {
             val (finalCat, finalSub) = applyTimeCategory(memory.category, memory.subcategory, cleanText)
+            // 时段规则命中情况
+            val timeCategory = TimeUtils.matchTimeCategory(cleanText)
+            val timeRuleHit = if (timeCategory != null) "${timeCategory.first}-${timeCategory.second}命中" else "未命中"
+            val source = if (memory.source == "user") "user" else "seed"
+            AppLogger.d(
+                requestId,
+                "分类匹配",
+                "待匹配：$cleanText，触发词：${memory.triggerWord}，来源：$source，" +
+                        "基础分类：${memory.category}-${memory.subcategory ?: ""}，" +
+                        "时段规则：$timeRuleHit，最终分类：${finalCat}-${finalSub ?: ""}",
+                billIndex
+            )
             return LocalResult(
                 type = memory.type, amount = amountFen,
                 category = finalCat, subcategory = finalSub,
@@ -286,6 +357,13 @@ class AppRepository(private val context: Context) {
         // 第2层：时间规则匹配
         val timeCat = TimeUtils.matchTimeCategory(cleanText)
         if (timeCat != null) {
+            AppLogger.d(
+                requestId,
+                "分类匹配",
+                "待匹配：$cleanText，触发词：时段词(${timeCat.first}-${timeCat.second})，来源：builtin，" +
+                        "基础分类：${timeCat.first}-${timeCat.second}，时段规则：命中，最终分类：${timeCat.first}-${timeCat.second}",
+                billIndex
+            )
             return LocalResult(
                 type = "expense", amount = amountFen,
                 category = timeCat.first, subcategory = timeCat.second,
@@ -298,6 +376,13 @@ class AppRepository(private val context: Context) {
         // 第3层：内置场景词匹配
         for ((keyword, catPair) in CategoryConstants.builtinSceneMap) {
             if (cleanText.contains(keyword)) {
+                AppLogger.d(
+                    requestId,
+                    "分类匹配",
+                    "待匹配：$cleanText，触发词：$keyword，来源：builtin，" +
+                            "基础分类：${catPair.first}-${catPair.second}，时段规则：未命中，最终分类：${catPair.first}-${catPair.second}",
+                    billIndex
+                )
                 return LocalResult(
                     type = "expense", amount = amountFen,
                     category = catPair.first, subcategory = catPair.second,
@@ -309,6 +394,7 @@ class AppRepository(private val context: Context) {
         }
 
         // 拿不准 → 返回 null，降级走 AI
+        AppLogger.d(requestId, "分类匹配", "待匹配：$cleanText，触发词：无，来源：无，基础分类：无，时段规则：未命中，最终分类：null（降级AI）", billIndex)
         return null
     }
 
@@ -316,11 +402,13 @@ class AppRepository(private val context: Context) {
      * 记账输入解析（三级降级：本地→FLASH→PRO）。
      * 优先尝试全本地解析（支持多笔拆分），失败则降级到 AI。
      * @return 解析结果列表，可能包含多笔本地记录或单笔AI记录
+     *
+     * @param requestId 请求唯一ID（无默认值，调用方必须传入）
      */
-    suspend fun parseAccountingInput(rawInput: String): List<ParseResult> {
+    suspend fun parseAccountingInput(rawInput: String, requestId: String): List<ParseResult> {
         return try {
             // 第1级：完全本地解析（支持多笔拆分）
-            val localRecords = localParseRecords(rawInput)
+            val localRecords = localParseRecords(rawInput, requestId)
             if (localRecords.isNotEmpty()) {
                 return localRecords.map { r ->
                     val (finalCat, finalSub) = applyTimeCategory(r.category, r.subcategory, rawInput)
@@ -335,14 +423,14 @@ class AppRepository(private val context: Context) {
             }
 
             // 降级到 AI
-            val probableType = preJudgeType(rawInput)
-            val memory = matchMemory(rawInput, probableType)
+            val probableType = preJudgeType(rawInput, requestId, null)
+            val memory = matchMemory(rawInput, probableType, requestId, null)
 
             if (memory != null) {
                 // 第2级：半本地解析 — 记忆命中但金额/时间复杂，调用 FLASH
                 val (systemPrompt, userPrompt) = buildCompletionPrompt(rawInput)
-                val aiContent = callDeepSeek(DeepSeekModels.FLASH, systemPrompt, userPrompt)
-                val json = parseAndValidate(aiContent)
+                val aiContent = callDeepSeek(DeepSeekModels.FLASH, systemPrompt, userPrompt, requestId)
+                val json = parseAndValidate(aiContent, requestId)
                 listOf(ParseResult.Success(
                     type = memory.type, amount = extractAmount(json),
                     category = memory.category, subcategory = memory.subcategory,
@@ -353,10 +441,10 @@ class AppRepository(private val context: Context) {
             } else {
                 // 第3级：全量AI解析 — 调用 PRO
                 val (systemPrompt, userPrompt) = buildFullPrompt(rawInput)
-                val aiContent = callDeepSeek(DeepSeekModels.PRO, systemPrompt, userPrompt)
-                val json = parseAndValidate(aiContent)
+                val aiContent = callDeepSeek(DeepSeekModels.PRO, systemPrompt, userPrompt, requestId)
+                val json = parseAndValidate(aiContent, requestId)
                 val aiType = json.get("type").asString
-                val fallbackMemory = matchMemory(rawInput, aiType)
+                val fallbackMemory = matchMemory(rawInput, aiType, requestId, null)
                 if (fallbackMemory != null) {
                     listOf(ParseResult.Success(
                         type = fallbackMemory.type, amount = extractAmount(json),
@@ -377,6 +465,7 @@ class AppRepository(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
+            AppLogger.e(requestId, "入库执行", "解析异常：${e.message}", e)
             listOf(ParseResult.Failure(e.message ?: "解析失败"))
         }
     }
@@ -384,10 +473,24 @@ class AppRepository(private val context: Context) {
     /**
      * 关键词预判收支类型：优先匹配收入短语，再匹配支出词。
      * 二者都不匹配则默认 expense（符合日常90%场景）。
+     *
+     * 节点2「意图分流」埋点：打印原始文本、命中的关键词/规则、最终判定意图、判定依据。
      */
-    private fun preJudgeType(rawInput: String): String {
-        if (incomeKeywords.any { rawInput.contains(it) }) return "income"
-        if (expenseKeywords.any { rawInput.contains(it) }) return "expense"
+    private fun preJudgeType(rawInput: String, requestId: String, billIndex: Int? = null): String {
+        val hitIncome = incomeKeywords.firstOrNull { rawInput.contains(it) }
+        if (hitIncome != null) {
+            val msg = "原始文本：$rawInput，命中关键词/规则：$hitIncome，最终判定意图：收入，判定依据：收入关键词"
+            if (billIndex != null) AppLogger.d(requestId, "意图分流", msg, billIndex) else AppLogger.d(requestId, "意图分流", msg)
+            return "income"
+        }
+        val hitExpense = expenseKeywords.firstOrNull { rawInput.contains(it) }
+        if (hitExpense != null) {
+            val msg = "原始文本：$rawInput，命中关键词/规则：$hitExpense，最终判定意图：支出，判定依据：支出关键词"
+            if (billIndex != null) AppLogger.d(requestId, "意图分流", msg, billIndex) else AppLogger.d(requestId, "意图分流", msg)
+            return "expense"
+        }
+        val msg = "原始文本：$rawInput，命中关键词/规则：无，最终判定意图：支出，判定依据：默认 expense"
+        if (billIndex != null) AppLogger.d(requestId, "意图分流", msg, billIndex) else AppLogger.d(requestId, "意图分流", msg)
         return "expense"
     }
 
@@ -399,15 +502,32 @@ class AppRepository(private val context: Context) {
     /**
      * 触发词最长匹配，优先用户记忆(source="user")，其次种子词(source="seed")。
      * 多个同类型命中时取最长触发词。
+     *
+     * 节点4「分类匹配」埋点：记忆命中时打印来源、触发词、最终分类。
      */
-    private suspend fun matchMemory(rawInput: String, type: String): CategoryMemoryEntity? {
+    private suspend fun matchMemory(
+        rawInput: String,
+        type: String,
+        requestId: String,
+        billIndex: Int? = null
+    ): CategoryMemoryEntity? {
         val allMemories = memoryDao.getAllByTypeOnce(type)
         val userMemories = allMemories.filter { it.source == "user" && rawInput.contains(it.triggerWord) }
         if (userMemories.isNotEmpty()) {
-            return userMemories.maxByOrNull { it.triggerWord.length }
+            val hit = userMemories.maxByOrNull { it.triggerWord.length }
+            if (hit != null) {
+                val msg = "记忆命中（user）→ 触发词：${hit.triggerWord}，分类：${hit.category}-${hit.subcategory ?: ""}"
+                if (billIndex != null) AppLogger.d(requestId, "分类匹配", msg, billIndex) else AppLogger.d(requestId, "分类匹配", msg)
+            }
+            return hit
         }
         val seedMemories = allMemories.filter { it.source == "seed" && rawInput.contains(it.triggerWord) }
-        return seedMemories.maxByOrNull { it.triggerWord.length }
+        val hit = seedMemories.maxByOrNull { it.triggerWord.length }
+        if (hit != null) {
+            val msg = "记忆命中（seed）→ 触发词：${hit.triggerWord}，分类：${hit.category}-${hit.subcategory ?: ""}"
+            if (billIndex != null) AppLogger.d(requestId, "分类匹配", msg, billIndex) else AppLogger.d(requestId, "分类匹配", msg)
+        }
+        return hit
     }
 
     /**
@@ -520,16 +640,29 @@ $memoryRules
     /**
      * 调用 DeepSeek Chat Completion API。
      *
-     * @param systemPrompt 系统提示词（角色与规则）
-     * @param userPrompt   用户输入文本
+     * 节点5「AI请求发起」埋点：打印模型名称、Prompt长度、请求开始时间；API Key 脱敏后打印。
+     * 节点6「AI响应返回」埋点：打印响应状态、返回内容长度、关键片段摘要；错误时打印错误码和错误信息。
+     *
+     * @param requestId 请求唯一ID（无默认值，调用方必须传入）
      * @return AI 返回的文本内容
      * @throws Exception 未配置 API Key、HTTP 错误、内容为空时抛出
      */
-    private suspend fun callDeepSeek(model: String, systemPrompt: String, userPrompt: String): String {
+    private suspend fun callDeepSeek(model: String, systemPrompt: String, userPrompt: String, requestId: String): String {
         val apiKey = getApiKey()
         if (apiKey.isBlank() || apiKey == "your_api_key_here") {
+            AppLogger.e(requestId, "AI请求发起", "未配置 API Key，模型：$model", null)
             throw Exception("未配置 API Key，请在设置页配置")
         }
+
+        val maskedKey = AppLogger.maskApiKey(apiKey)
+        val startTime = System.currentTimeMillis()
+        val timeStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA).format(startTime)
+        AppLogger.i(
+            requestId,
+            "AI请求发起",
+            "模型：$model，Prompt长度：${systemPrompt.length + userPrompt.length}字符 " +
+                    "（system=${systemPrompt.length}，user=${userPrompt.length}），开始时间：$timeStr，API Key：$maskedKey"
+        )
 
         val request = ChatRequest(
             model = model,
@@ -539,13 +672,28 @@ $memoryRules
             )
         )
 
-        val response = deepSeekApi.chatCompletion("Bearer $apiKey", request)
-        if (response.isSuccessful) {
-            val content = response.body()?.choices?.firstOrNull()?.message?.content
-                ?: throw Exception("AI 返回内容为空")
-            return content
-        } else {
-            throw Exception("API 请求失败：${response.code()}")
+        return try {
+            val response = deepSeekApi.chatCompletion("Bearer $apiKey", request)
+            if (response.isSuccessful) {
+                val content = response.body()?.choices?.firstOrNull()?.message?.content
+                    ?: throw Exception("AI 返回内容为空")
+                val preview = if (content.length > 100) content.substring(0, 100) + "..." else content
+                AppLogger.d(requestId, "AI响应返回", "状态：成功，返回长度：${content.length}字符，摘要：$preview")
+                content
+            } else {
+                val code = response.code()
+                val errBody = response.errorBody()?.string() ?: ""
+                AppLogger.e(
+                    requestId,
+                    "AI响应返回",
+                    "状态：失败，错误码：$code，错误信息：${response.message()}，错误体摘要：${errBody.take(200)}",
+                    null
+                )
+                throw Exception("API 请求失败：$code")
+            }
+        } catch (e: Exception) {
+            // 异常已被上面各分支覆盖；这里仅兜底
+            throw e
         }
     }
 
@@ -559,7 +707,7 @@ $memoryRules
      *    type/category 仅在字段存在时校验（补全 Prompt 不含这些字段）
      * 4. 校验失败抛异常，由上层走 Failure 流程
      */
-    private fun parseAndValidate(jsonStr: String): JsonObject {
+    private fun parseAndValidate(jsonStr: String, requestId: String): JsonObject {
         // 1. 清理 markdown 包裹与多余文本
         val cleaned = cleanJsonString(jsonStr)
 
@@ -567,11 +715,13 @@ $memoryRules
         val json = try {
             Gson().fromJson(cleaned, JsonObject::class.java)
         } catch (e: Exception) {
+            AppLogger.e(requestId, "AI响应返回", "JSON 解析失败：${e.message}，原始内容：${jsonStr.take(200)}", e)
             throw Exception("JSON 解析失败：${e.message}")
         }
 
         // 3. amount 校验（必填，> 0）
         if (!json.has("amount") || json.get("amount").isJsonNull) {
+            AppLogger.e(requestId, "AI响应返回", "缺少金额字段", null)
             throw Exception("缺少金额字段")
         }
         val amountElement = json.get("amount")
@@ -581,12 +731,16 @@ $memoryRules
             amountElement.asString.toDoubleOrNull()
                 ?: throw Exception("金额格式错误：$amountElement")
         }
-        if (amountYuan <= 0) throw Exception("金额必须大于 0")
+        if (amountYuan <= 0) {
+            AppLogger.e(requestId, "AI响应返回", "金额必须大于 0：$amountYuan", null)
+            throw Exception("金额必须大于 0")
+        }
 
         // 4. type 校验（仅在字段存在时）
         if (json.has("type") && !json.get("type").isJsonNull) {
             val type = json.get("type").asString
             if (type != "expense" && type != "income") {
+                AppLogger.e(requestId, "AI响应返回", "收支类型非法：$type", null)
                 throw Exception("收支类型非法：$type")
             }
         }
@@ -594,12 +748,14 @@ $memoryRules
         // 5. category 校验（仅在字段存在时）
         if (json.has("category") && !json.get("category").isJsonNull) {
             if (json.get("category").asString.isBlank()) {
+                AppLogger.e(requestId, "AI响应返回", "分类不能为空", null)
                 throw Exception("分类不能为空")
             }
         }
 
         // 6. time 校验（必填，合法时间格式）
         if (!json.has("time") || json.get("time").isJsonNull) {
+            AppLogger.e(requestId, "AI响应返回", "缺少时间字段", null)
             throw Exception("缺少时间字段")
         }
         val timeStr = json.get("time").asString
@@ -608,6 +764,7 @@ $memoryRules
             sdf.isLenient = false
             sdf.parse(timeStr) ?: throw Exception("时间格式错误")
         } catch (e: Exception) {
+            AppLogger.e(requestId, "AI响应返回", "时间格式错误：$timeStr", e)
             throw Exception("时间格式错误：$timeStr")
         }
 
@@ -662,8 +819,10 @@ $memoryRules
     /**
      * 对话查询：将用户问题与本地统计数据一起发送给 AI，返回纯文本回复。
      * 用于"这个月花了多少""餐饮消费分析"等非记账意图的对话。
+     *
+     * @param requestId 请求唯一ID（无默认值，调用方必须传入）
      */
-    suspend fun chatQuery(userInput: String): String {
+    suspend fun chatQuery(userInput: String, requestId: String): String {
         return try {
             val monthStart = TimeUtils.getMonthStart()
             val futureEnd = TimeUtils.now() + 86_400_000L
@@ -703,8 +862,23 @@ $memoryRules
 ${statsLines.joinToString("\n")}
 """.trimIndent()
 
+            val apiKey = getApiKey()
+            if (apiKey.isBlank() || apiKey == "your_api_key_here") {
+                AppLogger.e(requestId, "AI请求发起", "对话查询未配置 API Key", null)
+                return "请先在设置页配置 API Key，才能使用 AI 对话功能。"
+            }
+            val maskedKey = AppLogger.maskApiKey(apiKey)
+            val startTime = System.currentTimeMillis()
+            val timeStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA).format(startTime)
+            AppLogger.i(
+                requestId,
+                "AI请求发起",
+                "模型：${DeepSeekModels.FLASH}（对话查询），Prompt长度：${systemPrompt.length + userInput.length}字符，" +
+                        "开始时间：$timeStr，API Key：$maskedKey"
+            )
+
             val response = deepSeekApi.chatCompletion(
-                "Bearer ${getApiKey()}",
+                "Bearer $apiKey",
                 ChatRequest(
                     model = DeepSeekModels.FLASH,
                     messages = listOf(
@@ -714,15 +888,26 @@ ${statsLines.joinToString("\n")}
                 )
             )
             if (response.isSuccessful) {
-                response.body()?.choices?.firstOrNull()?.message?.content
-                    ?: "抱歉，我没有理解您的问题，请换种方式问问看。"
+                val content = response.body()?.choices?.firstOrNull()?.message?.content
+                val preview = if (content != null && content.length > 100) content.substring(0, 100) + "..." else content ?: ""
+                AppLogger.d(requestId, "AI响应返回", "状态：成功（对话查询），返回长度：${content?.length ?: 0}字符，摘要：$preview")
+                content ?: "抱歉，我没有理解您的问题，请换种方式问问看。"
             } else {
+                val code = response.code()
+                AppLogger.e(
+                    requestId,
+                    "AI响应返回",
+                    "状态：失败（对话查询），错误码：$code，错误信息：${response.message()}",
+                    null
+                )
                 "网络出了点问题，请稍后再试。"
             }
         } catch (e: Exception) {
             if (e.message?.contains("API Key") == true) {
+                AppLogger.e(requestId, "AI响应返回", "对话查询 API Key 异常：${e.message}", e)
                 "请先在设置页配置 API Key，才能使用 AI 对话功能。"
             } else {
+                AppLogger.e(requestId, "AI响应返回", "对话查询异常：${e.message}", e)
                 "抱歉，暂时无法回答您的问题：${e.message}"
             }
         }

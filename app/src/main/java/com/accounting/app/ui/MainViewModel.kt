@@ -20,6 +20,7 @@ import com.accounting.app.ui.model.RecentRecord
 import com.accounting.app.ui.model.SubGroup
 import com.accounting.app.ui.model.UiState
 import com.accounting.app.util.AmountUtils
+import com.accounting.app.util.AppLogger
 import com.accounting.app.util.CsvUtils
 import com.accounting.app.util.TimeUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -104,10 +105,17 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
      * 1. 疑问特征词/问号 → chatQuery() 对话流程
      * 2. 含金额 → parseAccountingInput() 记账流程
      * 3. 都不是 → chatQuery() 普通对话
+     *
+     * 节点1「入口接收」埋点：第一行生成 requestId 并打印用户原始输入文本。
+     * requestId 贯穿整条请求所有下游调用，多笔拆分场景下逐笔透传 billIndex。
      */
     fun sendMessage() {
         val rawInput = _uiState.value.inputText.trim()
         if (rawInput.isBlank()) return
+
+        // 节点1：入口生成 requestId 并打印原始输入（第一行！）
+        val requestId = AppLogger.generateRequestId()
+        AppLogger.d(requestId, "入口接收", "用户输入：$rawInput")
 
         viewModelScope.launch {
             _uiState.update {
@@ -121,7 +129,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             // 三级分流判断
             if (AmountUtils.isQuestionInput(rawInput)) {
                 // 疑问 → 对话查询
-                val reply = repository.chatQuery(rawInput)
+                val reply = repository.chatQuery(rawInput, requestId)
                 _uiState.update {
                     it.copy(
                         messages = it.messages + ChatMessage.AiTextMessage(reply, TimeUtils.now()),
@@ -135,7 +143,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             if (AmountUtils.containsAmount(rawInput)) {
                 // 含金额 → 记账流程（支持多笔拆分）
                 // 检查金额数量上限
-                val segmentCount = AmountUtils.extractAmounts(rawInput).size
+                val segmentCount = AmountUtils.extractAmounts(rawInput, requestId).size
                 if (segmentCount > 10) {
                     _uiState.update {
                         it.copy(
@@ -150,7 +158,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                     return@launch
                 }
 
-                val results = repository.parseAccountingInput(rawInput)
+                val results = repository.parseAccountingInput(rawInput, requestId)
                 val successCount = results.count { it is ParseResult.Success }
                 val failures = results.filterIsInstance<ParseResult.Failure>()
                 if (failures.isNotEmpty() && results.all { it is ParseResult.Failure }) {
@@ -165,26 +173,44 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                         )
                     }
                 } else {
+                    // 批量入库：单笔明细 + 汇总日志
+                    var successInsertCount = 0
+                    var failInsertCount = 0
+                    val totalCount = results.size
                     var lastUnmatchedCard: ChatMessage.CardMessage? = null
-                    for (result in results) {
+                    for ((index, result) in results.withIndex()) {
+                        val billIndex = index + 1
                         if (result is ParseResult.Success) {
                             val recordId = if (result.type == "expense") {
-                                repository.insertExpense(ExpenseEntity(
-                                    amount = result.amount, category = result.category,
-                                    subcategory = result.subcategory, merchant = result.merchant,
-                                    time = result.time, note = result.note,
-                                    confidence = result.confidence, rawInput = rawInput,
-                                    createdAt = TimeUtils.now()
-                                ))
+                                try {
+                                    repository.insertExpense(ExpenseEntity(
+                                        amount = result.amount, category = result.category,
+                                        subcategory = result.subcategory, merchant = result.merchant,
+                                        time = result.time, note = result.note,
+                                        confidence = result.confidence, rawInput = rawInput,
+                                        createdAt = TimeUtils.now()
+                                    ), requestId, billIndex)
+                                } catch (e: Exception) {
+                                    AppLogger.e(requestId, "入库执行", "单笔入库异常：${e.message}", e, billIndex)
+                                    failInsertCount++
+                                    continue
+                                }
                             } else {
-                                repository.insertIncome(IncomeEntity(
-                                    amount = result.amount, category = result.category,
-                                    subcategory = result.subcategory, merchant = result.merchant,
-                                    time = result.time, note = result.note,
-                                    confidence = result.confidence, rawInput = rawInput,
-                                    createdAt = TimeUtils.now()
-                                ))
+                                try {
+                                    repository.insertIncome(IncomeEntity(
+                                        amount = result.amount, category = result.category,
+                                        subcategory = result.subcategory, merchant = result.merchant,
+                                        time = result.time, note = result.note,
+                                        confidence = result.confidence, rawInput = rawInput,
+                                        createdAt = TimeUtils.now()
+                                    ), requestId, billIndex)
+                                } catch (e: Exception) {
+                                    AppLogger.e(requestId, "入库执行", "单笔入库异常：${e.message}", e, billIndex)
+                                    failInsertCount++
+                                    continue
+                                }
                             }
+                            successInsertCount++
                             if (result.matchedMemory && result.memoryId != null) {
                                 repository.incrementMemoryHitCount(result.memoryId)
                             }
@@ -201,10 +227,18 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                             }
                         }
                     }
+                    // 节点7 汇总日志（仅多笔场景下输出，单笔场景单笔明细已带结果）
+                    if (totalCount > 1) {
+                        AppLogger.i(
+                            requestId,
+                            "入库执行-汇总",
+                            "总条数：$totalCount，成功：$successInsertCount，失败：$failInsertCount"
+                        )
+                    }
                     _uiState.update { it.copy(isLoading = false) }
                     // 自动弹出学习确认
                     if (_uiState.value.autoLearnEnabled && lastUnmatchedCard != null) {
-                        openLearnDialog(lastUnmatchedCard!!)
+                        openLearnDialog(lastUnmatchedCard)
                     }
                     // 多笔拆分提示
                     if (successCount > 1) {
@@ -216,7 +250,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             }
 
             // 兜底：普通对话
-            val reply = repository.chatQuery(rawInput)
+            val reply = repository.chatQuery(rawInput, requestId)
             _uiState.update {
                 it.copy(
                     messages = it.messages + ChatMessage.AiTextMessage(reply, TimeUtils.now()),
@@ -309,19 +343,29 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         type: String, amount: Long, category: String, subcategory: String?,
         merchant: String?, time: Long, note: String?, rawInput: String
     ) {
+        // 手动记账：单独生成 requestId
+        val requestId = AppLogger.generateRequestId()
+        AppLogger.d(requestId, "入口接收", "手动记账，用户输入：$rawInput")
+
         viewModelScope.launch {
-            val recordId = if (type == "expense") {
-                repository.insertExpense(ExpenseEntity(
-                    amount = amount, category = category, subcategory = subcategory,
-                    merchant = merchant, time = time, note = note,
-                    confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
-                ))
-            } else {
-                repository.insertIncome(IncomeEntity(
-                    amount = amount, category = category, subcategory = subcategory,
-                    merchant = merchant, time = time, note = note,
-                    confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
-                ))
+            val billIndex = 1
+            val recordId = try {
+                if (type == "expense") {
+                    repository.insertExpense(ExpenseEntity(
+                        amount = amount, category = category, subcategory = subcategory,
+                        merchant = merchant, time = time, note = note,
+                        confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
+                    ), requestId, billIndex)
+                } else {
+                    repository.insertIncome(IncomeEntity(
+                        amount = amount, category = category, subcategory = subcategory,
+                        merchant = merchant, time = time, note = note,
+                        confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
+                    ), requestId, billIndex)
+                }
+            } catch (e: Exception) {
+                AppLogger.e(requestId, "入库执行", "手动记账入库异常：${e.message}", e, billIndex)
+                return@launch
             }
             val triggerWord = extractTriggerWord(merchant)
             if (triggerWord != null) {

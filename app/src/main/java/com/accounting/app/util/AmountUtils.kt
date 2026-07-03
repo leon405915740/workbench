@@ -51,16 +51,37 @@ object AmountUtils {
     /** 单笔金额提取（保留兼容） */
     fun extractAmount(rawInput: String): Long? = extractAmountWithPos(rawInput)?.first
 
-    fun extractAmounts(rawInput: String): List<AmountSegment> {
+    /**
+     * 多笔金额拆分。
+     *
+     * 节点3「金额提取」埋点：在方法入口打印原始文本、提取到的金额列表（含金额值+起始位置）、拆分后的片段列表。
+     * 异常分支 catch 中调用 AppLogger.e() 打印异常。
+     *
+     * @param requestId 请求唯一ID（无默认值，调用方必须传入）
+     */
+    fun extractAmounts(rawInput: String, requestId: String): List<AmountSegment> {
+        AppLogger.d(requestId, "金额提取", "开始提取金额")
         val results = mutableListOf<AmountSegment>()
         var remaining = rawInput
 
-        while (remaining.isNotEmpty()) {
-            val match = extractAmountWithPos(remaining) ?: break
-            val (amountFen, startIndex, endIndex) = match
-            val textBefore = remaining.substring(0, startIndex).trim()
-            results.add(AmountSegment(amountFen, textBefore))
-            remaining = remaining.substring(endIndex).trimStart()
+        try {
+            while (remaining.isNotEmpty()) {
+                val match = extractAmountWithPos(remaining) ?: break
+                val (amountFen, startIndex, endIndex) = match
+                val textBefore = remaining.substring(0, startIndex).trim()
+                results.add(AmountSegment(amountFen, textBefore))
+                remaining = remaining.substring(endIndex).trimStart()
+            }
+            // 埋点：金额提取结果汇总
+            val amountsDesc = results.joinToString(", ") { "value=${it.amountFen}分" }
+            val segmentsDesc = results.joinToString(", ") { "\"${it.textBefore}${it.amountFen}分\"" }
+            AppLogger.d(
+                requestId,
+                "金额提取",
+                "原始文本：$rawInput，提取金额：[$amountsDesc]，拆分片段：[$segmentsDesc]，共${results.size}笔"
+            )
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "金额提取", "金额拆分异常：${e.message}", e)
         }
         return results
     }

@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from D:\记账app\app\src\main\AndroidManifest.xml:2:1-27:12
-INJECTED from D:\记账app\app\src\main\AndroidManifest.xml:2:1-27:12
-INJECTED from D:\记账app\app\src\main\AndroidManifest.xml:2:1-27:12
-INJECTED from D:\记账app\app\src\main\AndroidManifest.xml:2:1-27:12
+ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:2:1-27:12
+INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:2:1-27:12
+INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:2:1-27:12
+INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:2:1-27:12
 MERGED from [androidx.navigation:navigation-common:2.7.5] C:\Users\Administrator\.gradle\caches\transforms-3\a283bf8bcbf1e46d5ae277044faa5411\transformed\navigation-common-2.7.5\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-runtime:2.7.5] C:\Users\Administrator\.gradle\caches\transforms-3\15fa0e9f7debaece91c976575c6c231e\transformed\navigation-runtime-2.7.5\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-common-ktx:2.7.5] C:\Users\Administrator\.gradle\caches\transforms-3\9a32dd6848e08c3025554c7958257702\transformed\navigation-common-ktx-2.7.5\AndroidManifest.xml:2:1-7:12
@@ -60,22 +60,22 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Ad
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Administrator\.gradle\caches\transforms-3\5c743439103775b4d1fae8154babeaaa\transformed\startup-runtime-1.1.1\AndroidManifest.xml:17:1-33:12
 MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\Administrator\.gradle\caches\transforms-3\2e29fbdd06bb1e8ab2417eda74bddd64\transformed\tracing-1.0.0\AndroidManifest.xml:17:1-24:12
 	package
-		INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
 	android:versionName
-		INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
 	xmlns:tools
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:3:5-51
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:3:5-51
 	android:versionCode
-		INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
 	xmlns:android
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:2:11-69
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:2:11-69
 uses-permission#android.permission.INTERNET
-ADDED from D:\记账app\app\src\main\AndroidManifest.xml:5:5-67
+ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:5:5-67
 	android:name
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:5:22-64
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:5:22-64
 application
-ADDED from D:\记账app\app\src\main\AndroidManifest.xml:7:5-25:19
-INJECTED from D:\记账app\app\src\main\AndroidManifest.xml:7:5-25:19
+ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:7:5-25:19
+INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:7:5-25:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.5.4] C:\Users\Administrator\.gradle\caches\transforms-3\733f8cb4cc604421b0608bd9258c728b\transformed\ui-tooling-release\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.5.4] C:\Users\Administrator\.gradle\caches\transforms-3\733f8cb4cc604421b0608bd9258c728b\transformed\ui-tooling-release\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.emoji2:emoji2:1.4.0] C:\Users\Administrator\.gradle\caches\transforms-3\1f5c5f2ecfe44d8954de67acfddb6f33\transformed\emoji2-1.4.0\AndroidManifest.xml:23:5-33:19
@@ -93,45 +93,45 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Ad
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Administrator\.gradle\caches\transforms-3\5c743439103775b4d1fae8154babeaaa\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Administrator\.gradle\caches\transforms-3\5c743439103775b4d1fae8154babeaaa\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
 	android:extractNativeLibs
-		INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.12.0] C:\Users\Administrator\.gradle\caches\transforms-3\86b9444eefd878efd211f6aa3d72c707\transformed\core-1.12.0\AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:12:9-35
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:12:9-35
 	android:label
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:10:9-41
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:10:9-41
 	android:roundIcon
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:11:9-54
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:11:9-54
 	tools:targetApi
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:14:9-29
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:14:9-29
 	android:icon
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:9:9-43
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:9:9-43
 	android:allowBackup
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:8:9-35
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:8:9-35
 	android:theme
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:13:9-51
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:13:9-51
 activity#com.accounting.app.MainActivity
-ADDED from D:\记账app\app\src\main\AndroidManifest.xml:16:9-24:20
+ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:16:9-24:20
 	android:exported
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:18:13-36
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:18:13-36
 	android:theme
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:19:13-55
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:19:13-55
 	android:name
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:17:13-41
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:17:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from D:\记账app\app\src\main\AndroidManifest.xml:20:13-23:29
+ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:20:13-23:29
 action#android.intent.action.MAIN
-ADDED from D:\记账app\app\src\main\AndroidManifest.xml:21:17-69
+ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:21:17-69
 	android:name
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:21:25-66
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:21:25-66
 category#android.intent.category.LAUNCHER
-ADDED from D:\记账app\app\src\main\AndroidManifest.xml:22:17-77
+ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:22:17-77
 	android:name
-		ADDED from D:\记账app\app\src\main\AndroidManifest.xml:22:27-74
+		ADDED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml:22:27-74
 uses-sdk
-INJECTED from D:\记账app\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
-INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
-INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
+INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
+INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
 MERGED from [androidx.navigation:navigation-common:2.7.5] C:\Users\Administrator\.gradle\caches\transforms-3\a283bf8bcbf1e46d5ae277044faa5411\transformed\navigation-common-2.7.5\AndroidManifest.xml:20:5-44
 MERGED from [androidx.navigation:navigation-common:2.7.5] C:\Users\Administrator\.gradle\caches\transforms-3\a283bf8bcbf1e46d5ae277044faa5411\transformed\navigation-common-2.7.5\AndroidManifest.xml:20:5-44
 MERGED from [androidx.navigation:navigation-runtime:2.7.5] C:\Users\Administrator\.gradle\caches\transforms-3\15fa0e9f7debaece91c976575c6c231e\transformed\navigation-runtime-2.7.5\AndroidManifest.xml:20:5-44
@@ -243,9 +243,9 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Administrator\.gra
 MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\Administrator\.gradle\caches\transforms-3\2e29fbdd06bb1e8ab2417eda74bddd64\transformed\tracing-1.0.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\Administrator\.gradle\caches\transforms-3\2e29fbdd06bb1e8ab2417eda74bddd64\transformed\tracing-1.0.0\AndroidManifest.xml:20:5-22:41
 	android:targetSdkVersion
-		INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from D:\记账app\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Administrator\.trae-cn\worktrees\记账app\feat-full-link-logging-request-id-0Z5XoW\app\src\main\AndroidManifest.xml
 activity#androidx.compose.ui.tooling.PreviewActivity
 ADDED from [androidx.compose.ui:ui-tooling-android:1.5.4] C:\Users\Administrator\.gradle\caches\transforms-3\733f8cb4cc604421b0608bd9258c728b\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
 	android:exported

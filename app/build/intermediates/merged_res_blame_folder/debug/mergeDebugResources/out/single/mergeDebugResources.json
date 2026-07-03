@@ -1,18 +1,14 @@
 [
     {
-        "merged": "C:\\Users\\Administrator\\.gradle\\daemon\\8.4\\com.accounting.app-debug-55:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "C:\\Users\\Administrator\\.gradle\\daemon\\8.4\\com.accounting.app-main-57:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+        "merged": "com.accounting.app-debug-55:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.accounting.app-main-57:/mipmap-anydpi-v26/ic_launcher_round.xml"
     },
     {
-        "merged": "C:\\Users\\Administrator\\.gradle\\daemon\\8.4\\com.accounting.app-debug-55:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "C:\\Users\\Administrator\\.gradle\\daemon\\8.4\\com.accounting.app-main-57:\\mipmap-anydpi-v26\\ic_launcher.xml"
+        "merged": "com.accounting.app-debug-55:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.accounting.app-main-57:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
         "merged": "com.accounting.app-debug-55:/drawable_ic_launcher_foreground.xml.flat",
         "source": "com.accounting.app-main-57:/drawable/ic_launcher_foreground.xml"
-    },
-    {
-        "merged": "C:\\Users\\Administrator\\.gradle\\daemon\\8.4\\com.accounting.app-debug-55:\\drawable_ic_launcher_foreground.xml.flat",
-        "source": "C:\\Users\\Administrator\\.gradle\\daemon\\8.4\\com.accounting.app-main-57:\\drawable\\ic_launcher_foreground.xml"
     }
 ]
