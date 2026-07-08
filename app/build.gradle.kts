@@ -15,8 +15,8 @@ android {
         applicationId = "com.accounting.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 12
+        versionName = "2.7.0"
 
         // 从 local.properties 读取 DeepSeek API Key，编译期注入 BuildConfig.DEEPSEEK_API_KEY
         val localProperties = Properties().apply {
@@ -59,6 +59,15 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    // 自定义 APK 输出文件名：记账_v{versionName}_{buildType}.apk
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
+            output.outputFileName = "记账_v${variant.versionName}_${variant.buildType.name}.apk"
         }
     }
 }
@@ -104,4 +113,8 @@ dependencies {
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.12.0")
+
+    // JUnit 测试
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
 }
