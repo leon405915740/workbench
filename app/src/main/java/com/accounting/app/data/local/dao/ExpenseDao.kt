@@ -24,7 +24,7 @@ interface ExpenseDao {
     @Query("SELECT * FROM expense WHERE id = :id")
     suspend fun getById(id: Long): ExpenseEntity?
 
-    @Query("SELECT * FROM expense WHERE time BETWEEN :startTime AND :endTime ORDER BY time DESC")
+    @Query("SELECT * FROM expense WHERE time >= :startTime AND time < :endTime ORDER BY time DESC")
     fun getByTimeRange(startTime: Long, endTime: Long): Flow<List<ExpenseEntity>>
 
     @Query("SELECT * FROM expense ORDER BY time DESC LIMIT :limit")
@@ -36,10 +36,10 @@ interface ExpenseDao {
     @Query("UPDATE expense SET category = :category, subcategory = :subcategory WHERE id = :id")
     suspend fun updateCategory(id: Long, category: String, subcategory: String?)
 
-    @Query("SELECT SUM(amount) FROM expense WHERE time BETWEEN :startTime AND :endTime")
+    @Query("SELECT SUM(amount) FROM expense WHERE time >= :startTime AND time < :endTime")
     fun getSumByTimeRange(startTime: Long, endTime: Long): Flow<Long?>
 
-    @Query("SELECT category, SUM(amount) as totalAmount FROM expense WHERE time BETWEEN :startTime AND :endTime GROUP BY category ORDER BY totalAmount DESC")
+    @Query("SELECT category, SUM(amount) as totalAmount FROM expense WHERE time >= :startTime AND time < :endTime GROUP BY category ORDER BY totalAmount DESC")
     fun getCategoryStats(startTime: Long, endTime: Long): Flow<List<CategoryAmount>>
 
     @Query("SELECT COUNT(*) FROM expense")

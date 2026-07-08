@@ -26,7 +26,7 @@ interface IncomeDao {
     @Query("SELECT * FROM income WHERE id = :id")
     suspend fun getById(id: Long): IncomeEntity?
 
-    @Query("SELECT * FROM income WHERE time BETWEEN :startTime AND :endTime ORDER BY time DESC")
+    @Query("SELECT * FROM income WHERE time >= :startTime AND time < :endTime ORDER BY time DESC")
     fun getByTimeRange(startTime: Long, endTime: Long): Flow<List<IncomeEntity>>
 
     @Query("SELECT * FROM income ORDER BY time DESC LIMIT :limit")
@@ -38,10 +38,10 @@ interface IncomeDao {
     @Query("UPDATE income SET category = :category, subcategory = :subcategory WHERE id = :id")
     suspend fun updateCategory(id: Long, category: String, subcategory: String?)
 
-    @Query("SELECT SUM(amount) FROM income WHERE time BETWEEN :startTime AND :endTime")
+    @Query("SELECT SUM(amount) FROM income WHERE time >= :startTime AND time < :endTime")
     fun getSumByTimeRange(startTime: Long, endTime: Long): Flow<Long?>
 
-    @Query("SELECT category, SUM(amount) as totalAmount FROM income WHERE time BETWEEN :startTime AND :endTime GROUP BY category ORDER BY totalAmount DESC")
+    @Query("SELECT category, SUM(amount) as totalAmount FROM income WHERE time >= :startTime AND time < :endTime GROUP BY category ORDER BY totalAmount DESC")
     fun getCategoryStats(startTime: Long, endTime: Long): Flow<List<CategoryAmount>>
 
     @Query("SELECT COUNT(*) FROM income")
