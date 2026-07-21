@@ -34,6 +34,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import com.accounting.app.capture.PaymentAccessibilityService
+import com.accounting.app.capture.PaymentNotificationService
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(private val repository: AppRepository) : ViewModel() {
@@ -47,6 +51,13 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         observeStats()
         restoreChatHistory()
         loadSavedApiKey()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        PaymentAccessibilityService.clearCaptureCallback()
+        PaymentNotificationService.clearNotificationCallback()
+        AppLogger.d("", "MainViewModel", "ViewModel 已清除，回调已清理")
     }
 
     /** 加载已保存的 API Key 到 UI 状态 */
@@ -129,7 +140,9 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             // 三级分流判断
             if (AmountUtils.isQuestionInput(rawInput)) {
                 // 疑问 → 对话查询
-                val reply = repository.chatQuery(rawInput, requestId)
+                val reply = withContext(Dispatchers.IO) {
+                    repository.chatQuery(rawInput, requestId)
+                }
                 _uiState.update {
                     it.copy(
                         messages = it.messages + ChatMessage.AiTextMessage(reply, TimeUtils.now()),
@@ -158,7 +171,9 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                     return@launch
                 }
 
-                val results = repository.parseAccountingInput(rawInput, requestId)
+                val results = withContext(Dispatchers.IO) {
+                    repository.parseAccountingInput(rawInput, requestId)
+                }
                 val successCount = results.count { it is ParseResult.Success }
                 val failures = results.filterIsInstance<ParseResult.Failure>()
                 if (failures.isNotEmpty() && results.all { it is ParseResult.Failure }) {
@@ -181,38 +196,44 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                     for ((index, result) in results.withIndex()) {
                         val billIndex = index + 1
                         if (result is ParseResult.Success) {
-                            val recordId = if (result.type == "expense") {
-                                try {
-                                    repository.insertExpense(ExpenseEntity(
-                                        amount = result.amount, category = result.category,
-                                        subcategory = result.subcategory, merchant = result.merchant,
-                                        time = result.time, note = result.note,
-                                        confidence = result.confidence, rawInput = rawInput,
-                                        createdAt = TimeUtils.now()
-                                    ), requestId, billIndex)
-                                } catch (e: Exception) {
-                                    AppLogger.e(requestId, "入库执行", "单笔入库异常：${e.message}", e, billIndex)
-                                    failInsertCount++
-                                    continue
+                            val recordId = withContext(Dispatchers.IO) {
+                                if (result.type == "expense") {
+                                    try {
+                                        repository.insertExpense(ExpenseEntity(
+                                            amount = result.amount, category = result.category,
+                                            subcategory = result.subcategory, merchant = result.merchant,
+                                            time = result.time, note = result.note,
+                                            confidence = result.confidence, rawInput = rawInput,
+                                            createdAt = TimeUtils.now()
+                                        ), requestId, billIndex)
+                                    } catch (e: Exception) {
+                                        AppLogger.e(requestId, "入库执行", "单笔入库异常：${e.message}", e, billIndex)
+                                        null
+                                    }
+                                } else {
+                                    try {
+                                        repository.insertIncome(IncomeEntity(
+                                            amount = result.amount, category = result.category,
+                                            subcategory = result.subcategory, merchant = result.merchant,
+                                            time = result.time, note = result.note,
+                                            confidence = result.confidence, rawInput = rawInput,
+                                            createdAt = TimeUtils.now()
+                                        ), requestId, billIndex)
+                                    } catch (e: Exception) {
+                                        AppLogger.e(requestId, "入库执行", "单笔入库异常：${e.message}", e, billIndex)
+                                        null
+                                    }
                                 }
-                            } else {
-                                try {
-                                    repository.insertIncome(IncomeEntity(
-                                        amount = result.amount, category = result.category,
-                                        subcategory = result.subcategory, merchant = result.merchant,
-                                        time = result.time, note = result.note,
-                                        confidence = result.confidence, rawInput = rawInput,
-                                        createdAt = TimeUtils.now()
-                                    ), requestId, billIndex)
-                                } catch (e: Exception) {
-                                    AppLogger.e(requestId, "入库执行", "单笔入库异常：${e.message}", e, billIndex)
-                                    failInsertCount++
-                                    continue
-                                }
+                            }
+                            if (recordId == null) {
+                                failInsertCount++
+                                continue
                             }
                             successInsertCount++
                             if (result.matchedMemory && result.memoryId != null) {
-                                repository.incrementMemoryHitCount(result.memoryId)
+                                withContext(Dispatchers.IO) {
+                                    repository.incrementMemoryHitCount(result.memoryId)
+                                }
                             }
                             val card = ChatMessage.CardMessage(
                                 recordId = recordId, type = result.type, amount = result.amount,
@@ -250,7 +271,9 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             }
 
             // 兜底：普通对话
-            val reply = repository.chatQuery(rawInput, requestId)
+            val reply = withContext(Dispatchers.IO) {
+                repository.chatQuery(rawInput, requestId)
+            }
             _uiState.update {
                 it.copy(
                     messages = it.messages + ChatMessage.AiTextMessage(reply, TimeUtils.now()),
@@ -280,19 +303,25 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
     fun confirmEditCategory(newCategory: String, newSubcategory: String?) {
         val dialog = _uiState.value.showEditDialog ?: return
         viewModelScope.launch {
-            if (dialog.type == "expense") {
-                repository.updateExpenseCategory(dialog.recordId, newCategory, newSubcategory)
-            } else {
-                repository.updateIncomeCategory(dialog.recordId, newCategory, newSubcategory)
+            withContext(Dispatchers.IO) {
+                if (dialog.type == "expense") {
+                    repository.updateExpenseCategory(dialog.recordId, newCategory, newSubcategory)
+                } else {
+                    repository.updateIncomeCategory(dialog.recordId, newCategory, newSubcategory)
+                }
             }
             val triggerWord = extractTriggerWord(dialog.merchant)
             if (triggerWord != null) {
-                val normalizedSub = repository.normalizeCategoryForMemory(newCategory, newSubcategory)
-                repository.upsertMemory(CategoryMemoryEntity(
-                    triggerWord = triggerWord, type = dialog.type,
-                    category = newCategory, subcategory = normalizedSub,
-                    createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
-                ))
+                val normalizedSub = withContext(Dispatchers.IO) {
+                    repository.normalizeCategoryForMemory(newCategory, newSubcategory)
+                }
+                withContext(Dispatchers.IO) {
+                    repository.upsertMemory(CategoryMemoryEntity(
+                        triggerWord = triggerWord, type = dialog.type,
+                        category = newCategory, subcategory = normalizedSub,
+                        createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
+                    ))
+                }
                 val typeLabel = if (dialog.type == "expense") "支出" else "收入"
                 val subLabel = newSubcategory?.let { "-$it" } ?: ""
                 _uiState.update {
@@ -316,8 +345,10 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
 
     fun deleteRecord(recordId: Long, type: String) {
         viewModelScope.launch {
-            if (type == "expense") repository.deleteExpense(recordId)
-            else repository.deleteIncome(recordId)
+            withContext(Dispatchers.IO) {
+                if (type == "expense") repository.deleteExpense(recordId)
+                else repository.deleteIncome(recordId)
+            }
             _uiState.update { state ->
                 state.copy(
                     messages = state.messages.filterNot {
@@ -350,18 +381,20 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         viewModelScope.launch {
             val billIndex = 1
             val recordId = try {
-                if (type == "expense") {
-                    repository.insertExpense(ExpenseEntity(
-                        amount = amount, category = category, subcategory = subcategory,
-                        merchant = merchant, time = time, note = note,
-                        confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
-                    ), requestId, billIndex)
-                } else {
-                    repository.insertIncome(IncomeEntity(
-                        amount = amount, category = category, subcategory = subcategory,
-                        merchant = merchant, time = time, note = note,
-                        confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
-                    ), requestId, billIndex)
+                withContext(Dispatchers.IO) {
+                    if (type == "expense") {
+                        repository.insertExpense(ExpenseEntity(
+                            amount = amount, category = category, subcategory = subcategory,
+                            merchant = merchant, time = time, note = note,
+                            confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
+                        ), requestId, billIndex)
+                    } else {
+                        repository.insertIncome(IncomeEntity(
+                            amount = amount, category = category, subcategory = subcategory,
+                            merchant = merchant, time = time, note = note,
+                            confidence = 1.0f, rawInput = rawInput, createdAt = TimeUtils.now()
+                        ), requestId, billIndex)
+                    }
                 }
             } catch (e: Exception) {
                 AppLogger.e(requestId, "入库执行", "手动记账入库异常：${e.message}", e, billIndex)
@@ -369,12 +402,14 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             }
             val triggerWord = extractTriggerWord(merchant)
             if (triggerWord != null) {
-                val normalizedSub = repository.normalizeCategoryForMemory(category, subcategory)
-                repository.upsertMemory(CategoryMemoryEntity(
-                    triggerWord = triggerWord, type = type,
-                    category = category, subcategory = normalizedSub,
-                    createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
-                ))
+                withContext(Dispatchers.IO) {
+                    val normalizedSub = repository.normalizeCategoryForMemory(category, subcategory)
+                    repository.upsertMemory(CategoryMemoryEntity(
+                        triggerWord = triggerWord, type = type,
+                        category = category, subcategory = normalizedSub,
+                        createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
+                    ))
+                }
             }
             _uiState.update {
                 it.copy(
@@ -507,30 +542,36 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
     /** 手动新增记忆 */
     fun addMemory(triggerWord: String, type: String, category: String, subcategory: String?) {
         viewModelScope.launch {
-            val normalizedSub = repository.normalizeCategoryForMemory(category, subcategory)
-            repository.upsertMemory(CategoryMemoryEntity(
-                triggerWord = triggerWord, type = type,
-                category = category, subcategory = normalizedSub,
-                createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
-            ))
+            withContext(Dispatchers.IO) {
+                val normalizedSub = repository.normalizeCategoryForMemory(category, subcategory)
+                repository.upsertMemory(CategoryMemoryEntity(
+                    triggerWord = triggerWord, type = type,
+                    category = category, subcategory = normalizedSub,
+                    createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
+                ))
+            }
             _uiState.update { it.copy(toast = "已添加记忆：$triggerWord") }
         }
     }
 
     fun deleteMemory(id: Long) {
-        viewModelScope.launch { repository.deleteMemory(id) }
+        viewModelScope.launch { withContext(Dispatchers.IO) { repository.deleteMemory(id) } }
     }
 
     fun clearAllMemories() {
         viewModelScope.launch {
-            repository.deleteAllMemories()
+            withContext(Dispatchers.IO) {
+                repository.deleteAllMemories()
+            }
             _uiState.update { it.copy(toast = "已清空所有记忆") }
         }
     }
 
     fun restoreDefaultMemories() {
         viewModelScope.launch {
-            repository.reseedMemories()
+            withContext(Dispatchers.IO) {
+                repository.reseedMemories()
+            }
             _uiState.update { it.copy(toast = "已恢复默认记忆") }
         }
     }
@@ -539,7 +580,9 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
 
     fun saveApiKey(key: String) {
         viewModelScope.launch {
-            repository.setApiKey(key)
+            withContext(Dispatchers.IO) {
+                repository.setApiKey(key)
+            }
             _uiState.update { it.copy(savedApiKey = key, toast = "API Key 已保存并生效") }
         }
     }
@@ -548,8 +591,11 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
 
     fun prepareCsvExport() {
         viewModelScope.launch {
-            val expenses = repository.getAllExpenses().first()
-            val incomes = repository.getAllIncomes().first()
+            val (expenses, incomes) = withContext(Dispatchers.IO) {
+                val expenses = repository.getAllExpenses().first()
+                val incomes = repository.getAllIncomes().first()
+                Pair(expenses, incomes)
+            }
             _uiState.update { it.copy(csvExportData = CsvUtils.generateCsv(expenses, incomes)) }
         }
     }
@@ -586,12 +632,14 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
     /** 确认学习：将触发词+分类写入记忆库，时段分类自动降级为正餐 */
     fun confirmLearnKeyword(triggerWord: String, type: String, category: String, subcategory: String?) {
         viewModelScope.launch {
-            val normalizedSub = repository.normalizeCategoryForMemory(category, subcategory)
-            repository.upsertMemory(CategoryMemoryEntity(
-                triggerWord = triggerWord, type = type,
-                category = category, subcategory = normalizedSub,
-                createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
-            ))
+            withContext(Dispatchers.IO) {
+                val normalizedSub = repository.normalizeCategoryForMemory(category, subcategory)
+                repository.upsertMemory(CategoryMemoryEntity(
+                    triggerWord = triggerWord, type = type,
+                    category = category, subcategory = normalizedSub,
+                    createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
+                ))
+            }
             val typeLabel = if (type == "expense") "支出" else "收入"
             val subLabel = subcategory?.let { "-$it" } ?: ""
             _uiState.update {

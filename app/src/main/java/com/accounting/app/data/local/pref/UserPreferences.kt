@@ -10,12 +10,13 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Base64
 
 private val Context.userDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "user_preferences"
 )
 
-private val KEY_DEEPSEEK_API_KEY = stringPreferencesKey("deepseek_api_key")
+private val KEY_DEEPSEEK_API_KEY = stringPreferencesKey("deepseek_api_key_encoded")
 private val KEY_CHAT_HISTORY = stringPreferencesKey("chat_history")
 
 /** 用于 DataStore 序列化的轻量消息记录 */
@@ -34,12 +35,21 @@ class UserPreferences(private val context: Context) {
     private val gson = Gson()
 
     fun getApiKey(): Flow<String> = context.userDataStore.data.map { prefs ->
-        prefs[KEY_DEEPSEEK_API_KEY] ?: ""
+        val stored = prefs[KEY_DEEPSEEK_API_KEY] ?: ""
+        if (stored.isBlank()) "" else {
+            try {
+                String(Base64.getDecoder().decode(stored), Charsets.UTF_8)
+            } catch (_: Exception) {
+                // 解码失败说明数据损坏，返回空字符串
+                ""
+            }
+        }
     }
 
     suspend fun setApiKey(key: String) {
+        val encoded = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8))
         context.userDataStore.edit { prefs ->
-            prefs[KEY_DEEPSEEK_API_KEY] = key
+            prefs[KEY_DEEPSEEK_API_KEY] = encoded
         }
     }
 

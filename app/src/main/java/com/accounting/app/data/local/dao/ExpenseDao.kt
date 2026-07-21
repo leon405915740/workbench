@@ -27,6 +27,9 @@ interface ExpenseDao {
     @Query("SELECT * FROM expense WHERE time >= :startTime AND time < :endTime ORDER BY time DESC")
     fun getByTimeRange(startTime: Long, endTime: Long): Flow<List<ExpenseEntity>>
 
+    @Query("SELECT * FROM expense WHERE time >= :startTime AND time < :endTime ORDER BY time DESC LIMIT :limit")
+    fun getByTimeRangeWithLimit(startTime: Long, endTime: Long, limit: Int): Flow<List<ExpenseEntity>>
+
     @Query("SELECT * FROM expense ORDER BY time DESC LIMIT :limit")
     fun getRecent(limit: Int): Flow<List<ExpenseEntity>>
 

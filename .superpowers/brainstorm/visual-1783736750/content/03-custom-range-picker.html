@@ -1,0 +1,85 @@
+<h2>自定义时间范围选择器 - 两种方案</h2>
+<p class="subtitle">点击"自定义"后弹出什么样的日期选择？</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">方案 1：弹窗日历（起止日期）</div>
+    <div class="mockup-body">
+      <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.1);">
+        <div style="text-align:center;font-weight:500;color:#333;margin-bottom:12px;">选择时间范围</div>
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:12px;color:#999;margin-bottom:4px;">开始日期</div>
+            <div style="background:#f5f5f5;padding:8px;border-radius:6px;font-size:13px;color:#333;">07月01日</div>
+          </div>
+          <div style="display:flex;align-items:center;color:#999;">→</div>
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:12px;color:#999;margin-bottom:4px;">结束日期</div>
+            <div style="background:#e8f8ef;padding:8px;border-radius:6px;font-size:13px;color:#07C160;">07月11日</div>
+          </div>
+        </div>
+        <div style="background:#fafafa;border-radius:8px;padding:8px;font-size:11px;color:#999;line-height:1.6;">
+          日 一 二 三 四 五 六<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;2&nbsp;&nbsp;3&nbsp;&nbsp;4&nbsp;&nbsp;5<br>
+          &nbsp;&nbsp;6&nbsp;&nbsp;7&nbsp;&nbsp;8&nbsp;&nbsp;9&nbsp;10&nbsp;<span style="background:#07C160;color:#fff;padding:2px 6px;border-radius:50%;">11</span>&nbsp;12<br>
+          13&nbsp;14&nbsp;15&nbsp;16&nbsp;17&nbsp;18&nbsp;19<br>
+          20&nbsp;21&nbsp;22&nbsp;23&nbsp;24&nbsp;25&nbsp;26<br>
+          27&nbsp;28&nbsp;29&nbsp;30&nbsp;31
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <div style="flex:1;text-align:center;padding:8px;background:#f5f5f5;border-radius:6px;font-size:13px;color:#666;">取消</div>
+          <div style="flex:1;text-align:center;padding:8px;background:#07C160;border-radius:6px;font-size:13px;color:#fff;">确定</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#666;margin-top:12px;line-height:1.6;">
+        弹窗里选开始和结束日期，操作一次到位。<br>
+        优点：直观；缺点：日历组件实现成本高。
+      </p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">方案 2：两个日期输入（滚轮选择）</div>
+    <div class="mockup-body">
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.1);">
+        <div style="text-align:center;font-weight:500;color:#333;margin-bottom:16px;">自定义时间范围</div>
+        
+        <div style="margin-bottom:12px;">
+          <div style="font-size:12px;color:#999;margin-bottom:6px;">开始日期</div>
+          <div style="background:#f5f5f5;padding:10px 12px;border-radius:8px;font-size:14px;color:#333;display:flex;justify-content:space-between;align-items:center;">
+            <span>2026年7月1日</span>
+            <span style="color:#999;">▼</span>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:16px;">
+          <div style="font-size:12px;color:#999;margin-bottom:6px;">结束日期</div>
+          <div style="background:#e8f8ef;padding:10px 12px;border-radius:8px;font-size:14px;color:#07C160;display:flex;justify-content:space-between;align-items:center;">
+            <span>2026年7月11日</span>
+            <span style="color:#07C160;">▼</span>
+          </div>
+        </div>
+        
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;text-align:center;padding:10px;background:#f5f5f5;border-radius:6px;font-size:13px;color:#666;">取消</div>
+          <div style="flex:1;text-align:center;padding:10px;background:#07C160;border-radius:6px;font-size:13px;color:#fff;">确定</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#666;margin-top:12px;line-height:1.6;">
+        点击输入框弹出系统日期选择器。<br>
+        优点：用系统组件，实现简单；缺点：要选两次。
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>我的建议</h3>
+  <p style="color:#666;">推荐 <strong>方案 2（两个日期输入 + 系统日期选择器）</strong>，理由：</p>
+  <ul style="color:#666;line-height:1.8;">
+    <li>用 Android 原生 DatePickerDialog，不用自己写日历组件，代码量少很多</li>
+    <li>用户也熟悉系统选择器的操作</li>
+    <li>自定义是低频功能，选两次完全可以接受</li>
+    <li>后续想换成完整日历也容易升级</li>
+  </ul>
+</div>

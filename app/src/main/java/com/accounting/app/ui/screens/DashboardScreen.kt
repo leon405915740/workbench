@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,8 +69,9 @@ fun DashboardScreen(
     onSwitchTab: (DashTab) -> Unit,
     onDeleteRecord: (Long, String) -> Unit
 ) {
-    // 待删除记录，null 时无弹窗
-    var pendingDelete by remember { mutableStateOf<RecentRecord?>(null) }
+    // 待删除记录，-1L 时无弹窗（拆解为基本类型以支持 rememberSaveable）
+    var pendingDeleteId by rememberSaveable { mutableStateOf(-1L) }
+    var pendingDeleteType by rememberSaveable { mutableStateOf("") }
     val isExpense = uiState.dashTab == DashTab.EXPENSE
 
     Column(
@@ -111,7 +113,10 @@ fun DashboardScreen(
                     RecentRecordItem(
                         record = record,
                         isExpense = isExpense,
-                        onClick = { pendingDelete = record }
+                        onClick = {
+                            pendingDeleteId = record.id
+                            pendingDeleteType = record.type
+                        }
                     )
                 }
             }
@@ -119,9 +124,12 @@ fun DashboardScreen(
     }
 
     // ===== 删除确认弹窗 =====
-    pendingDelete?.let { record ->
+    if (pendingDeleteId > 0) {
         AlertDialog(
-            onDismissRequest = { pendingDelete = null },
+            onDismissRequest = {
+                pendingDeleteId = -1L
+                pendingDeleteType = ""
+            },
             title = {
                 Text(
                     text = "删除记录",
@@ -137,14 +145,18 @@ fun DashboardScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    onDeleteRecord(record.id, record.type)
-                    pendingDelete = null
+                    onDeleteRecord(pendingDeleteId, pendingDeleteType)
+                    pendingDeleteId = -1L
+                    pendingDeleteType = ""
                 }) {
                     Text("删除", color = TextDelete)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) {
+                TextButton(onClick = {
+                    pendingDeleteId = -1L
+                    pendingDeleteType = ""
+                }) {
                     Text("取消", color = TextSecondary)
                 }
             }

@@ -1,7 +1,6 @@
 package com.accounting.app.data.repository
 
 import android.content.Context
-import com.accounting.app.BuildConfig
 import com.accounting.app.data.local.dao.CategoryAmount
 import com.accounting.app.data.local.database.AppDatabase
 import com.accounting.app.data.local.entity.CategoryMappingEntity
@@ -14,21 +13,20 @@ import com.accounting.app.data.remote.RetrofitClient
 import com.accounting.app.data.remote.model.ChatMessage
 import com.accounting.app.data.remote.model.ChatRequest
 import com.accounting.app.data.model.BillExecutePlan
-import com.accounting.app.domain.classification.MappingMatcher
-import com.accounting.app.domain.execution.BillTransaction
-import com.accounting.app.domain.execution.ExecuteResult
-import com.accounting.app.domain.execution.PlanExecutor
-import com.accounting.app.domain.plan.AiPlanner
-import com.accounting.app.domain.plan.PlanBuilder
-import com.accounting.app.domain.router.IntentRouter
-import com.accounting.app.domain.router.RoutingResult
-import com.accounting.app.util.AppLogger
+import com.accounting.app.parser.intent.MappingMatcher
+import com.accounting.app.plan.execution.BillTransaction
+import com.accounting.app.plan.execution.PlanExecutor
+import com.accounting.app.plan.model.ExecuteResult
+import com.accounting.app.ai.service.AiPlanner
+import com.accounting.app.plan.builder.PlanBuilder
+import com.accounting.app.parser.intent.IntentRouter
+import com.accounting.app.parser.model.RoutingResult
+import com.accounting.app.log.AppLogger
 import com.accounting.app.util.AmountUtils
-import com.accounting.app.util.TimeUtils
+import com.accounting.app.parser.time.TimeUtils
 import com.accounting.app.data.local.pref.PersistedMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import androidx.room.Transaction
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -95,6 +93,7 @@ class AppRepository(private val context: Context) {
     private val aiPlanner = AiPlanner(deepSeekApi) { getApiKey() }
     private val planBuilder = PlanBuilder(aiPlanner)
     private val planExecutor = PlanExecutor(
+        database,
         BillTransaction(expenseDao, incomeDao)
     )
     private val intentRouter = IntentRouter(planBuilder, aiPlanner)
@@ -254,12 +253,11 @@ class AppRepository(private val context: Context) {
     // ===================== API Key 管理 =====================
 
     /**
-     * 读取 API Key：优先使用用户在设置页配置的值，
-     * 为空则回退到编译期注入的 BuildConfig.DEEPSEEK_API_KEY。
+     * 读取 API Key：返回用户在设置页配置的值。
+     * 若用户未配置，返回空字符串，由调用方自行处理。
      */
     suspend fun getApiKey(): String {
-        val userKey = userPrefs.getApiKey().first()
-        return if (userKey.isNotBlank()) userKey else BuildConfig.DEEPSEEK_API_KEY
+        return userPrefs.getApiKey().first()
     }
 
     /** 写入用户配置的 API Key 到 DataStore */
@@ -279,7 +277,6 @@ class AppRepository(private val context: Context) {
      * @param plan 执行计划
      * @return 执行结果，包含成功/失败状态和失败原因
      */
-    @Transaction
     suspend fun executePlan(plan: BillExecutePlan): ExecuteResult {
         return planExecutor.execute(plan)
     }
@@ -320,8 +317,8 @@ class AppRepository(private val context: Context) {
             val income = incomeDao.getSumByTimeRange(start, end).first() ?: 0
             val topExpense = expenseDao.getCategoryStats(start, end).first()
                 .sortedByDescending { it.totalAmount }.take(3)
-            val allExpenses = expenseDao.getByTimeRange(start, end).first()
-            val allIncomes = incomeDao.getByTimeRange(start, end).first()
+            val allExpenses = expenseDao.getByTimeRangeWithLimit(start, end, 100).first()
+            val allIncomes = incomeDao.getByTimeRangeWithLimit(start, end, 100).first()
 
             val timeDesc = describeTimeRange(start, end)
             val statsLines = mutableListOf<String>()

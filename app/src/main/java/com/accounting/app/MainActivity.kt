@@ -24,12 +24,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
-import com.accounting.app.data.repository.AppRepository
 import com.accounting.app.ui.MainViewModel
 import com.accounting.app.ui.components.CategoryPicker
 import com.accounting.app.ui.components.ManualEntryDialog
@@ -55,7 +55,7 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val repository = AppRepository(applicationContext)
+        val repository = AccountingApp.getInstance().appRepository
         val viewModel = ViewModelProvider(
             this,
             MainViewModel.factory(repository)
@@ -79,10 +79,10 @@ fun MainScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
 
     // 设置页内是否展示记忆管理子页面（独立状态，避免侵入 UiState）
-    var showMemoryManage by remember { mutableStateOf(false) }
+    var showMemoryManage by rememberSaveable { mutableStateOf(false) }
 
     // 待写入的 CSV 内容，SAF 创建文件成功后用于写入
-    var pendingCsvContent by remember { mutableStateOf<String?>(null) }
+    var pendingCsvContent by rememberSaveable { mutableStateOf<String?>(null) }
 
     // SAF 创建文件 launcher，文件名格式：记账导出_YYYYMMDD_HHMMSS.csv
     val createCsvLauncher = rememberLauncherForActivityResult(

@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("kotlin-parcelize")
     // KSP 处理 Room 编译器
     id("com.google.devtools.ksp")
 }
