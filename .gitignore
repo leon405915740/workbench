@@ -24,3 +24,4 @@ local.properties
 /temp_apk/
 /ui-mockup/
 extract.py
+.superpowers/
