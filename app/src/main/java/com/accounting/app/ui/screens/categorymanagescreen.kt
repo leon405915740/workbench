@@ -65,6 +65,7 @@ import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
 import com.accounting.app.ui.theme.WeChatGreenLight
+import com.accounting.app.ui.theme.DividerColor
 import com.accounting.app.log.AppLogger
 
 @Composable
@@ -288,7 +289,7 @@ private fun AddCategoryDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = WeChatGreen,
-                        unfocusedIndicatorColor = Color(0xFFE5E5E5)
+                        unfocusedIndicatorColor = DividerColor
                     )
                 )
 
@@ -388,7 +389,7 @@ private fun EditCategoryDialog(
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
                     focusedIndicatorColor = WeChatGreen,
-                    unfocusedIndicatorColor = Color(0xFFE5E5E5)
+                    unfocusedIndicatorColor = DividerColor
                 )
             )
         },

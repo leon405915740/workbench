@@ -59,7 +59,7 @@ fun PlanPreviewCard(
                         onClick = { expanded = !expanded },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF5F5F5),
+                            containerColor = BackgroundGray,
                             contentColor = TextSecondary
                         ),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
@@ -77,7 +77,7 @@ fun PlanPreviewCard(
 
             if (expanded) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEFEFEF)))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,7 +87,7 @@ fun PlanPreviewCard(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEFEFEF)))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerColor))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -101,7 +101,7 @@ fun PlanPreviewCard(
                     onClick = onCancel,
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF5F5F5),
+                        containerColor = BackgroundGray,
                         contentColor = TextSecondary
                     ),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
@@ -191,7 +191,7 @@ private fun PlanItemRow(item: BillPlanItem, index: Int) {
 private fun getActionColor(action: PlanAction): Color {
     return when (action) {
         PlanAction.ADD -> WeChatGreen
-        PlanAction.UPDATE -> Color(0xFFF5A623)
-        PlanAction.DELETE -> Color(0xFFE53935)
+        PlanAction.UPDATE -> ConfidenceMedium
+        PlanAction.DELETE -> TextDelete
     }
 }

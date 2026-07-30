@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -49,8 +48,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.accounting.app.data.local.entity.CategoryMemoryEntity
+import com.accounting.app.ui.components.CategoryPicker
 import com.accounting.app.ui.model.MemoryGroup
-import com.accounting.app.ui.model.SubGroup
 import com.accounting.app.ui.model.UiState
 import com.accounting.app.ui.theme.BackgroundGray
 import com.accounting.app.ui.theme.CardWhite
@@ -59,6 +58,7 @@ import com.accounting.app.ui.theme.TextDelete
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
+import com.accounting.app.ui.theme.DividerColor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
@@ -68,12 +68,13 @@ import kotlinx.coroutines.launch
 fun MemoryManageScreen(
     uiState: UiState,
     onLoadMemories: (String) -> Unit,
-    onAddMemory: (triggerWord: String, type: String, category: String, subcategory: String?) -> Unit,
+    onAddMemory: (triggerWord: String, type: String, category: String) -> Unit,
     onDeleteMemory: (Long) -> Unit,
     onClearAll: () -> Unit,
     onBack: () -> Unit,
     onSearch: (String) -> Unit = {},
-    onToggleExpand: (String) -> Unit = {}
+    onToggleExpand: (String) -> Unit = {},
+    onSourceFilter: (String) -> Unit = {}
 ) {
     var currentTab by remember { mutableStateOf("expense") }
     var showClearDialog by remember { mutableStateOf(false) }
@@ -119,6 +120,12 @@ fun MemoryManageScreen(
             }
         )
 
+        // 来源筛选 Chip 行
+        SourceFilterRow(
+            currentFilter = uiState.memorySourceFilter,
+            onFilterSelected = { onSourceFilter(it) }
+        )
+
         // 词条总数
         Text(
             text = "共 ${uiState.totalMemoryCount} 条记忆规则",
@@ -147,18 +154,25 @@ fun MemoryManageScreen(
                 focusedContainerColor = CardWhite,
                 unfocusedContainerColor = CardWhite,
                 focusedIndicatorColor = WeChatGreen,
-                unfocusedIndicatorColor = Color(0xFFE5E5E5)
+                unfocusedIndicatorColor = DividerColor
             )
         )
 
         // 列表 / 空状态
         if (groups.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val emptyText = when {
+                    searchText.isNotBlank() -> "未找到匹配的记忆规则"
+                    uiState.memorySourceFilter == "auto" -> "暂无自动学习记忆\n记账后修改分类或确认关键词即可自动学习"
+                    uiState.memorySourceFilter == "seed" -> "暂无系统预置记忆\n点击右上角「恢复默认」可重置"
+                    uiState.memorySourceFilter == "user" -> "暂无手动添加的记忆\n点击右上角 + 号可新增"
+                    else -> "暂无记忆规则，记账后修改分类即可自动学习"
+                }
                 Text(
-                    text = if (searchText.isNotBlank()) "未找到匹配的记忆规则"
-                    else "暂无记忆规则，记账后修改分类即可自动学习",
+                    text = emptyText,
                     fontSize = 14.sp,
-                    color = TextSecondary
+                    color = TextSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
         } else {
@@ -170,9 +184,9 @@ fun MemoryManageScreen(
                 items(groups.size) { gIdx ->
                     val group = groups[gIdx]
                     val isExpanded = group.categoryName in expandedCats
-                    val totalItems = group.subGroups.sumOf { it.items.size }
+                    val totalItems = group.items.size
 
-                    // 一级分组标题
+                    // 分组标题
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -197,72 +211,62 @@ fun MemoryManageScreen(
                         )
                     }
 
-                    // 二级分组 + 词条（可折叠动画）
+                    // 词条列表（可折叠动画）
                     AnimatedVisibility(visible = isExpanded, enter = expandVertically(), exit = shrinkVertically()) {
                         Column {
-                            for (subGroup in group.subGroups) {
-                                // 二级分组标题
-                                if (subGroup.subName != null) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 6.dp, bottom = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier.width(3.dp).height(16.dp)
-                                                .clip(RoundedCornerShape(2.dp))
-                                                .background(NavActive)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                            for (item in group.items) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(CardWhite)
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = subGroup.subName,
-                                            fontSize = 13.sp,
-                                            color = TextSecondary,
-                                            fontWeight = FontWeight.Medium
+                                            text = item.triggerWord,
+                                            fontSize = 15.sp,
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                }
-
-                                // 词条行
-                                for (item in subGroup.items) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(CardWhite)
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = item.triggerWord,
-                                                fontSize = 15.sp,
-                                                color = TextPrimary,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        // 来源标签
-                                        val isSeed = item.source == "seed"
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(if (isSeed) Color(0xFFE8E8E8) else NavActive.copy(alpha = 0.12f))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = if (isSeed) "系统预置" else "自定义",
-                                                fontSize = 11.sp,
-                                                color = if (isSeed) TextSecondary else NavActive
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        IconButton(onClick = { deleteTargetId = item.id }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Outlined.Delete, contentDescription = "删除", tint = TextDelete, modifier = Modifier.size(18.dp))
-                                        }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    // 来源标签
+                                    val sourceLabel = when (item.source) {
+                                        "seed" -> "系统预置"
+                                        "auto" -> "自动学习"
+                                        else -> "手动添加"
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    val sourceColor = when (item.source) {
+                                        "seed" -> TextSecondary
+                                        "auto" -> WeChatGreen
+                                        else -> NavActive
+                                    }
+                                    val sourceBg = when (item.source) {
+                                        "seed" -> DividerColor
+                                        "auto" -> WeChatGreen.copy(alpha = 0.12f)
+                                        else -> NavActive.copy(alpha = 0.12f)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(sourceBg)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = sourceLabel,
+                                            fontSize = 11.sp,
+                                            color = sourceColor
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    IconButton(onClick = { deleteTargetId = item.id }, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Outlined.Delete, contentDescription = "删除", tint = TextDelete, modifier = Modifier.size(18.dp))
+                                    }
                                 }
+                                Spacer(modifier = Modifier.height(4.dp))
                             }
                         }
                     }
@@ -278,8 +282,8 @@ fun MemoryManageScreen(
     // 新增记忆弹窗
     if (showAddDialog) {
         AddMemoryDialog(
-            onConfirm = { word, type, cat, sub ->
-                onAddMemory(word, type, cat, sub)
+            onConfirm = { word, type, cat ->
+                onAddMemory(word, type, cat)
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false }
@@ -324,6 +328,39 @@ fun MemoryManageScreen(
 }
 
 @Composable
+private fun SourceFilterRow(currentFilter: String, onFilterSelected: (String) -> Unit) {
+    val filters = listOf(
+        "" to "全部",
+        "auto" to "自动学习",
+        "seed" to "系统预置",
+        "user" to "手动添加"
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth().background(CardWhite).padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        filters.forEach { (value, label) ->
+            val isSelected = currentFilter == value
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isSelected) NavActive else BackgroundGray)
+                    .clickable { onFilterSelected(value) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 12.sp,
+                    color = if (isSelected) CardWhite else TextSecondary,
+                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MemoryTabRow(currentTab: String, onTabSelected: (String) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().background(CardWhite).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -349,13 +386,13 @@ private fun MemoryTabButton(text: String, isSelected: Boolean, onClick: () -> Un
 
 @Composable
 private fun AddMemoryDialog(
-    onConfirm: (triggerWord: String, type: String, category: String, subcategory: String?) -> Unit,
+    onConfirm: (triggerWord: String, type: String, category: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var triggerWord by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("expense") }
     var category by remember { mutableStateOf("") }
-    var subcategory by remember { mutableStateOf("") }
+    var showCategoryPicker by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -364,25 +401,42 @@ private fun AddMemoryDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(value = triggerWord, onValueChange = { triggerWord = it },
                     label = { Text("触发词（如：麦当劳）") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(focusedIndicatorColor = WeChatGreen, unfocusedIndicatorColor = Color(0xFFE5E5E5)))
+                    colors = TextFieldDefaults.colors(focusedIndicatorColor = WeChatGreen, unfocusedIndicatorColor = DividerColor))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypeTabButton("支出", type == "expense", Modifier.weight(1f)) { type = "expense" }
-                    TypeTabButton("收入", type == "income", Modifier.weight(1f)) { type = "income" }
+                    TypeTabButton("支出", type == "expense", Modifier.weight(1f)) { type = "expense"; category = "" }
+                    TypeTabButton("收入", type == "income", Modifier.weight(1f)) { type = "income"; category = "" }
                 }
-                OutlinedTextField(value = category, onValueChange = { category = it },
-                    label = { Text("一级分类（如：餐饮）") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(focusedIndicatorColor = WeChatGreen, unfocusedIndicatorColor = Color(0xFFE5E5E5)))
-                OutlinedTextField(value = subcategory, onValueChange = { subcategory = it },
-                    label = { Text("二级分类（选填）") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(focusedIndicatorColor = WeChatGreen, unfocusedIndicatorColor = Color(0xFFE5E5E5)))
+                Box(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(6.dp))
+                        .background(BackgroundGray).clickable { showCategoryPicker = true }.padding(horizontal = 12.dp, vertical = 14.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        if (category.isNotBlank()) category else "点击选择分类",
+                        fontSize = 16.sp,
+                        color = if (category.isNotBlank()) TextPrimary else TextSecondary
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(triggerWord, type, category, subcategory.takeIf { it.isNotBlank() }) },
+            TextButton(onClick = { onConfirm(triggerWord, type, category) },
                 enabled = triggerWord.isNotBlank() && category.isNotBlank()) { Text("添加", color = WeChatGreen) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = TextSecondary) } }
     )
+
+    if (showCategoryPicker) {
+        CategoryPicker(
+            type = type,
+            initialCategory = category.ifBlank { null },
+            onConfirm = {
+                category = it
+                showCategoryPicker = false
+            },
+            onDismiss = { showCategoryPicker = false }
+        )
+    }
 }
 
 @Composable

@@ -43,9 +43,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.accounting.app.BuildConfig
+import com.accounting.app.log.AppLogger
 import com.accounting.app.ui.model.UiState
 import com.accounting.app.ui.theme.BackgroundGray
 import com.accounting.app.ui.theme.CardWhite
+import com.accounting.app.ui.theme.DividerColor
 import com.accounting.app.ui.theme.NavActive
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
@@ -67,6 +69,7 @@ fun SettingsScreen(
     onManageMemories: () -> Unit,
     onRestoreMemories: () -> Unit,
     onExportCsv: () -> Unit,
+    onExportLog: () -> Unit,
     onToggleAutoLearn: (() -> Unit)? = null
 ) {
     val scrollState = rememberScrollState()
@@ -75,6 +78,8 @@ fun SettingsScreen(
     var showApiKeyDialog by remember { mutableStateOf(false) }
     // 恢复默认记忆确认弹窗状态
     var showRestoreDialog by remember { mutableStateOf(false) }
+    // 调试日志开关（运行时可切换，默认跟随构建类型）
+    var debugLog by remember { mutableStateOf(AppLogger.isDebugLogEnabled()) }
 
     Column(
         modifier = Modifier
@@ -133,9 +138,44 @@ fun SettingsScreen(
             )
             SettingsDivider()
             SettingsItem(
+                title = "导出日志",
+                onClick = onExportLog
+            )
+            SettingsDivider()
+            SettingsItem(
                 title = "恢复默认记忆",
                 onClick = { showRestoreDialog = true }
             )
+            SettingsDivider()
+            // 调试日志开关：Release 包默认关闭详细日志，可在此开启便于排查
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "调试日志（详细）",
+                        fontSize = 16.sp,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "开启后记录完整运行日志，崩溃与错误始终记录",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
+                Switch(
+                    checked = debugLog,
+                    onCheckedChange = {
+                        debugLog = it
+                        AppLogger.setDebugLogEnabled(it)
+                    },
+                    colors = SwitchDefaults.colors(checkedThumbColor = CardWhite, checkedTrackColor = NavActive)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -274,7 +314,7 @@ private fun SettingsDivider() {
             .fillMaxWidth()
             .height(1.dp)
             .padding(horizontal = 16.dp)
-            .background(Color(0xFFEFEFEF))
+            .background(DividerColor)
     )
 }
 
@@ -306,7 +346,7 @@ private fun ApiKeyDialog(
                 visualTransformation = PasswordVisualTransformation(),
                 colors = TextFieldDefaults.colors(
                     focusedIndicatorColor = NavActive,
-                    unfocusedIndicatorColor = Color(0xFFE5E5E5)
+                    unfocusedIndicatorColor = DividerColor
                 )
             )
         },

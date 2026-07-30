@@ -16,6 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.accounting.app.domain.rule.RuleSuggestion
+import com.accounting.app.ui.theme.BackgroundGray
+import com.accounting.app.ui.theme.CardWhite
+import com.accounting.app.ui.theme.TextPrimary
+import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
 
 @Composable
@@ -27,7 +31,7 @@ fun RuleSuggestionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = CardWhite),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
@@ -35,21 +39,21 @@ fun RuleSuggestionDialog(
                     text = "💡 检测到新的记账模式",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black,
+                    color = TextPrimary,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 
                 Text(
                     text = "当输入包含「${suggestion.keywords.joinToString("」「")}」时",
                     fontSize = 14.sp,
-                    color = Color.Gray,
+                    color = TextSecondary,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
                 
                 Text(
                     text = "自动归为「${suggestion.category}${suggestion.subCategory?.let { "-$it" } ?: ""}」",
                     fontSize = 14.sp,
-                    color = Color.Gray,
+                    color = TextSecondary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
@@ -62,8 +66,8 @@ fun RuleSuggestionDialog(
                         onClick = onDismiss,
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF5F5F5),
-                            contentColor = Color.Gray
+                            containerColor = BackgroundGray,
+                            contentColor = TextSecondary
                         ),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
                     ) {
@@ -76,7 +80,7 @@ fun RuleSuggestionDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = WeChatGreen),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
                     ) {
-                        Text("保存规则", fontSize = 14.sp, color = Color.White)
+                        Text("保存规则", fontSize = 14.sp, color = CardWhite)
                     }
                 }
             }

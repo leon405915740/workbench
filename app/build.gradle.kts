@@ -16,8 +16,8 @@ android {
         applicationId = "com.accounting.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "2.7.0"
+        versionCode = 21
+        versionName = "2.11.0"
 
         // 从 local.properties 读取 DeepSeek API Key，编译期注入 BuildConfig.DEEPSEEK_API_KEY
         val localProperties = Properties().apply {
@@ -95,10 +95,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 
-    // Room 2.5.2（严格版本，禁止 2.6.x），使用 KSP 处理器
-    implementation("androidx.room:room-runtime:2.5.2")
-    implementation("androidx.room:room-ktx:2.5.2")
-    ksp("androidx.room:room-compiler:2.5.2")
+    // Room 2.6.1（测试构建：验证 2.6.x 是否会闪退，原架构书禁 2.6.1），使用 KSP 处理器
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // Retrofit 2.9.0 + OkHttp + Gson 转换器
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

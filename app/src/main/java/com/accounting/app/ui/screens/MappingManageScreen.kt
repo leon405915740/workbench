@@ -60,6 +60,7 @@ import com.accounting.app.ui.theme.TextDelete
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
+import com.accounting.app.ui.theme.DividerColor
 
 @Composable
 fun MappingManageScreen(
@@ -368,8 +369,8 @@ private fun MappingCard(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = WeChatGreen,
                             checkedTrackColor = WeChatGreen.copy(alpha = 0.3f),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color(0xFFE5E5E5)
+                            uncheckedThumbColor = TextSecondary,
+                            uncheckedTrackColor = DividerColor
                         )
                     )
                 }
@@ -472,7 +473,7 @@ private fun AddMappingDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = WeChatGreen,
-                        unfocusedIndicatorColor = Color(0xFFE5E5E5)
+                        unfocusedIndicatorColor = DividerColor
                     )
                 )
                 Row(

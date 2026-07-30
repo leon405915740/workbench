@@ -9,6 +9,7 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = CardWhite,
     primaryContainer = WeChatGreenLight,
     secondary = TextAmount,
+    secondaryContainer = DividerColor,
     background = BackgroundGray,
     surface = CardWhite,
     onSurface = TextPrimary,

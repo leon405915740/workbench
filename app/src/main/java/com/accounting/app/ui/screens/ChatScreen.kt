@@ -60,6 +60,7 @@ import com.accounting.app.ui.theme.BubbleAi
 import com.accounting.app.ui.theme.BubbleError
 import com.accounting.app.ui.theme.BubbleUser
 import com.accounting.app.ui.theme.CardWhite
+import com.accounting.app.ui.theme.DividerColor
 import com.accounting.app.ui.theme.NavActive
 import com.accounting.app.ui.theme.WeChatGreen
 import com.accounting.app.ui.theme.TextPrimary
@@ -77,7 +78,7 @@ fun ChatScreen(
     onManualEntry: (String) -> Unit,
     onLearnKeyword: (ChatMessage.CardMessage) -> Unit,
     onDismissLearn: () -> Unit,
-    onConfirmLearn: (triggerWord: String, type: String, category: String, subcategory: String?) -> Unit
+    onConfirmLearn: (triggerWord: String, type: String, category: String) -> Unit
 ) {
     val listState = rememberLazyListState()
     val keyboard = LocalSoftwareKeyboardController.current
@@ -86,6 +87,13 @@ fun ChatScreen(
     LaunchedEffect(messages.size, uiState.isLoading) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
+    // 重复点击记账Tab → 滚动到顶部
+    LaunchedEffect(uiState.chatResetSignal) {
+        if (uiState.chatResetSignal > 0 && messages.isNotEmpty()) {
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -175,8 +183,8 @@ fun ChatScreen(
     uiState.showLearnDialog?.let { dialog ->
         LearnConfirmDialog(
             dialog = dialog,
-            onConfirm = { word, type, cat, sub ->
-                onConfirmLearn(word, type, cat, sub)
+            onConfirm = { word, type, cat ->
+                onConfirmLearn(word, type, cat)
             },
             onDismiss = onDismissLearn
         )
@@ -210,7 +218,7 @@ private fun UserBubble(message: ChatMessage.UserMessage) {
 @Composable
 private fun LearnConfirmDialog(
     dialog: LearnDialogData,
-    onConfirm: (triggerWord: String, type: String, category: String, subcategory: String?) -> Unit,
+    onConfirm: (triggerWord: String, type: String, category: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var triggerWord by remember { mutableStateOf(dialog.triggerWord) }
@@ -221,7 +229,7 @@ private fun LearnConfirmDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "将「${dialog.category}${dialog.subcategory?.let { "-$it" } ?: ""}」与关键词关联，下次自动识别。",
+                    text = "将「${dialog.category}」与关键词关联，下次自动识别。",
                     fontSize = 14.sp,
                     color = TextSecondary
                 )
@@ -233,14 +241,14 @@ private fun LearnConfirmDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = WeChatGreen,
-                        unfocusedIndicatorColor = Color(0xFFE5E5E5)
+                        unfocusedIndicatorColor = DividerColor
                     )
                 )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(triggerWord.trim(), dialog.type, dialog.category, dialog.subcategory) },
+                onClick = { onConfirm(triggerWord.trim(), dialog.type, dialog.category) },
                 enabled = triggerWord.isNotBlank()
             ) {
                 Text("保存", color = WeChatGreen)
@@ -377,7 +385,7 @@ private fun BottomInputBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(0.5.dp)
-                .background(Color(0xFFE7E5E4))
+                .background(DividerColor)
         )
         Row(
             modifier = Modifier

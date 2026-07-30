@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +50,8 @@ import com.accounting.app.ui.theme.TextDelete
 import com.accounting.app.ui.theme.TextIncome
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
+import com.accounting.app.ui.theme.DividerColor
+import com.accounting.app.ui.theme.SageGreen
 import com.accounting.app.util.AmountUtils
 import com.accounting.app.util.TimeUtils
 import java.util.Calendar
@@ -73,6 +77,14 @@ fun DashboardScreen(
     var pendingDeleteId by rememberSaveable { mutableStateOf(-1L) }
     var pendingDeleteType by rememberSaveable { mutableStateOf("") }
     val isExpense = uiState.dashTab == DashTab.EXPENSE
+    val dashListState = rememberLazyListState()
+
+    // 重复点击统计Tab → 滚动到顶部
+    LaunchedEffect(uiState.dashResetSignal) {
+        if (uiState.dashResetSignal > 0) {
+            dashListState.animateScrollToItem(0)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -84,6 +96,7 @@ fun DashboardScreen(
 
         // ===== 2/3/4. 内容区（可滚动） =====
         LazyColumn(
+            state = dashListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -217,7 +230,7 @@ private fun DashTabButton(
             text = text,
             fontSize = 14.sp,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-            color = if (isSelected) CardWhite else Color(0xFF666666)
+            color = if (isSelected) CardWhite else TextSecondary
         )
     }
 }
@@ -241,9 +254,9 @@ private fun SummaryCard(uiState: UiState, isExpense: Boolean) {
 
     // 渐变：支出绿色系，收入蓝色系
     val gradient = if (isExpense) {
-        Brush.linearGradient(listOf(WeChatGreenLight, Color(0xFF5BECA3), WeChatGreen))
+        Brush.linearGradient(listOf(Color(0xFF8B91B0), WeChatGreen, WeChatGreenDark))
     } else {
-        Brush.linearGradient(listOf(Color(0xFFDBEAFE), Color(0xFF93C5FD), TextAmount))
+        Brush.linearGradient(listOf(SageGreen, TextIncome, Color(0xFF496B61)))
     }
 
     // 金额格式：支出无符号，收入带 + 前缀
@@ -254,7 +267,7 @@ private fun SummaryCard(uiState: UiState, isExpense: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(gradient)
             .padding(24.dp)
     ) {
@@ -408,7 +421,7 @@ private fun CategoryRow(
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp)),
             color = progressColor,
-            trackColor = Color(0xFFE5E5E5)
+            trackColor = DividerColor
         )
     }
 }
@@ -426,13 +439,8 @@ private fun RecentRecordItem(
     val amountColor = if (isExpense) TextAmount else TextIncome
     val amountText = formatAmount(record.amount, isExpense)
 
-    // 分类名：一级 + 二级
-    val categoryText = buildString {
-        append(record.category)
-        record.subcategory?.takeIf { it.isNotBlank() }?.let {
-            append(" · ").append(it)
-        }
-    }
+    // 分类名
+    val categoryText = record.category
     // 商家 + 时间
     val infoText = buildString {
         record.merchant?.takeIf { it.isNotBlank() }?.let {
@@ -463,6 +471,15 @@ private fun RecentRecordItem(
                 fontSize = 12.sp,
                 color = TextSecondary
             )
+            record.note?.takeIf { it.isNotBlank() }?.let { note ->
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = note,
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    maxLines = 2
+                )
+            }
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
