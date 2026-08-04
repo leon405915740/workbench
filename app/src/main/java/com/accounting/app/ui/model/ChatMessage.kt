@@ -28,9 +28,11 @@ sealed class ChatMessage {
         val subcategory: String?,
         val merchant: String?,
         val recordTime: Long,       // 消费/收入时间
+        val note: String?,          // 备注
         val confidence: Float,
         val matchedMemory: Boolean, // 是否命中记忆
         val rawInput: String,       // 原始输入（用于手动记账预填）
+        val source: String = "",
         override val timestamp: Long  // 消息发送时间
     ) : ChatMessage()
 

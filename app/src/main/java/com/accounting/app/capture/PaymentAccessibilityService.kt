@@ -1,8 +1,10 @@
 package com.accounting.app.capture
 
+import com.accounting.app.MainActivity
 import com.accounting.app.capture.model.PaymentInfo
 import com.accounting.app.log.AppLogger
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -186,8 +188,26 @@ class PaymentAccessibilityService : AccessibilityService() {
 
     private fun createDispatcher(): com.accounting.app.capture.dispatcher.CaptureDispatcher {
         return com.accounting.app.capture.dispatcher.CaptureDispatcher { info ->
-            captureCallback?.invoke(info)
+            launchMainActivity(info)
         }
+    }
+
+    /**
+     * 检测到支付成功后，把记账 App 拉到前台并携带 PaymentInfo。
+     *
+     * MainActivity launchMode=singleTask，已在运行则走 onNewIntent，
+     * 未运行则 onCreate。两条路径都从 Intent extra 取 PaymentInfo 弹记账确认窗。
+     */
+    private fun launchMainActivity(info: PaymentInfo) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra(MainActivity.EXTRA_PAYMENT_INFO, info)
+        }
+        startActivity(intent)
+        AppLogger.i(
+            info.captureId, "AutoCapture_Launch",
+            "跳转记账前台：merchant=${info.merchant}, amount=${info.amount}"
+        )
     }
 
     private fun generateCaptureId(): String {
@@ -195,16 +215,6 @@ class PaymentAccessibilityService : AccessibilityService() {
     }
 
     companion object {
-        private var captureCallback: ((PaymentInfo) -> Unit)? = null
-
-        fun setCaptureCallback(callback: (PaymentInfo) -> Unit) {
-            captureCallback = callback
-        }
-
-        fun clearCaptureCallback() {
-            captureCallback = null
-        }
-
         fun isAccessibilityServiceEnabled(androidContext: android.content.Context, serviceClass: Class<*>): Boolean {
             val serviceName = serviceClass.name
             val expectedComponentName = android.content.ComponentName(androidContext, serviceClass).flattenToString()

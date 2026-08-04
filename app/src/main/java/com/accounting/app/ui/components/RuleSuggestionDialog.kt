@@ -21,6 +21,7 @@ import com.accounting.app.ui.theme.CardWhite
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
+import com.accounting.app.ui.components.getCategoryEmoji
 
 @Composable
 fun RuleSuggestionDialog(
@@ -30,7 +31,7 @@ fun RuleSuggestionDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = CardWhite),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
@@ -50,8 +51,9 @@ fun RuleSuggestionDialog(
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
                 
+                val categoryEmoji = getCategoryEmoji(suggestion.category, suggestion.type)
                 Text(
-                    text = "自动归为「${suggestion.category}${suggestion.subCategory?.let { "-$it" } ?: ""}」",
+                    text = "自动归为「$categoryEmoji ${suggestion.category}${suggestion.subCategory?.let { "-$it" } ?: ""}」",
                     fontSize = 14.sp,
                     color = TextSecondary,
                     modifier = Modifier.padding(bottom = 16.dp)

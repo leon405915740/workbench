@@ -21,7 +21,7 @@ data class CategoryMemoryEntity(
     val category: String,       // 一级分类
     val subcategory: String?,   // 二级分类（通用分类，时段由运行时判定）
     val hitCount: Int = 1,      // 命中次数
-    val source: String = "user", // 来源：seed（系统预置）/ user（用户手动确认）
+    val source: String = "user", // 来源：seed（系统预置）/ auto（自动学习）/ user（手动添加）
     val confidence: Int = 100,  // 置信度 0-100，种子词默认 80，用户记忆默认 100
     val createdAt: Long,        // 创建时间
     val updatedAt: Long         // 最后更新时间

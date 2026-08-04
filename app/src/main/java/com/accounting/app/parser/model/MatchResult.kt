@@ -15,5 +15,6 @@ enum class MatchSource {
     MEMORY,
     TIME_RULE,
     AI_HINT,
+    AI_CORRECTION,
     FALLBACK
 }

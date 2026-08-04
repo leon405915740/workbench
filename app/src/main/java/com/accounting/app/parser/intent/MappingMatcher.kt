@@ -10,7 +10,8 @@ data class MappingMatchResult(
     val subcategoryId: Long?,
     val keyword: String,
     val source: String,
-    val confidence: Float
+    val confidence: Float,
+    val mappingId: Long?
 )
 
 object MappingMatcher {
@@ -31,28 +32,19 @@ object MappingMatcher {
             else -> 0.7f
         }
 
-        val category = CategoryService.getCategoryById(mapping.categoryId)?.name ?: "其他"
+        val category = CategoryService.getCategoryById(mapping.categoryId)?.name ?: "其他支出"
         val subcategory = mapping.subcategoryId?.let { CategoryService.getCategoryById(it)?.name }
         val message = "映射命中（${mapping.source}）→ 关键词：${mapping.keyword}，分类：${category}-${subcategory ?: ""}"
         AppLogger.d(requestId, "分类匹配", message, billIndex)
         AppLogger.decision(requestId, "分类匹配", mapping.keyword, "关键词映射命中，分类:$category", confidence, mapping.source, billIndex)
-
-        recordHit(mapping.keyword, mapping.type)
 
         return MappingMatchResult(
             categoryId = mapping.categoryId,
             subcategoryId = mapping.subcategoryId,
             keyword = mapping.keyword,
             source = mapping.source,
-            confidence = confidence
+            confidence = confidence,
+            mappingId = mapping.id
         )
-    }
-
-    private suspend fun recordHit(keyword: String, type: String) {
-        val repo = repository ?: return
-        val mapping = repo.findMappingByKeywordAndType(keyword, type)
-        if (mapping != null) {
-            repo.incrementMappingHitCount(mapping.id)
-        }
     }
 }

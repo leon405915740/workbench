@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +53,7 @@ import com.accounting.app.ui.components.CategoryPicker
 import com.accounting.app.ui.model.MemoryGroup
 import com.accounting.app.ui.model.UiState
 import com.accounting.app.ui.theme.BackgroundGray
+import com.accounting.app.ui.theme.BorderDefault
 import com.accounting.app.ui.theme.CardWhite
 import com.accounting.app.ui.theme.NavActive
 import com.accounting.app.ui.theme.TextDelete
@@ -59,6 +61,7 @@ import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
 import com.accounting.app.ui.theme.DividerColor
+import com.accounting.app.ui.components.getCategoryEmoji
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
@@ -154,7 +157,7 @@ fun MemoryManageScreen(
                 focusedContainerColor = CardWhite,
                 unfocusedContainerColor = CardWhite,
                 focusedIndicatorColor = WeChatGreen,
-                unfocusedIndicatorColor = DividerColor
+                unfocusedIndicatorColor = BorderDefault
             )
         )
 
@@ -197,7 +200,7 @@ fun MemoryManageScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${group.categoryName}($totalItems)",
+                            text = "${getCategoryEmoji(group.categoryName, currentTab)} ${group.categoryName}($totalItems)",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary,
@@ -343,8 +346,8 @@ private fun SourceFilterRow(currentFilter: String, onFilterSelected: (String) ->
             val isSelected = currentFilter == value
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (isSelected) NavActive else BackgroundGray)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isSelected) WeChatGreen else BackgroundGray)
                     .clickable { onFilterSelected(value) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
@@ -374,12 +377,14 @@ private fun MemoryTabRow(currentTab: String, onTabSelected: (String) -> Unit) {
 @Composable
 private fun MemoryTabButton(text: String, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) NavActive else BackgroundGray)
+        modifier = modifier.heightIn(min = 40.dp)
+            .shadow(elevation = if (isSelected) 2.dp else 0.dp, shape = RoundedCornerShape(20.dp), clip = false)
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isSelected) CardWhite else Color.Transparent)
             .clickable(onClick = onClick).padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, fontSize = 14.sp, color = if (isSelected) CardWhite else TextPrimary,
+        Text(text, fontSize = 14.sp, color = if (isSelected) WeChatGreen else TextSecondary,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal)
     }
 }
@@ -401,7 +406,7 @@ private fun AddMemoryDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(value = triggerWord, onValueChange = { triggerWord = it },
                     label = { Text("触发词（如：麦当劳）") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(focusedIndicatorColor = WeChatGreen, unfocusedIndicatorColor = DividerColor))
+                    colors = TextFieldDefaults.colors(focusedIndicatorColor = WeChatGreen, unfocusedIndicatorColor = BorderDefault))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TypeTabButton("支出", type == "expense", Modifier.weight(1f)) { type = "expense"; category = "" }
                     TypeTabButton("收入", type == "income", Modifier.weight(1f)) { type = "income"; category = "" }
@@ -442,12 +447,14 @@ private fun AddMemoryDialog(
 @Composable
 private fun TypeTabButton(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
-        modifier = modifier.heightIn(min = 36.dp).clip(RoundedCornerShape(6.dp))
-            .background(if (selected) WeChatGreen else BackgroundGray)
+        modifier = modifier.heightIn(min = 36.dp)
+            .shadow(elevation = if (selected) 2.dp else 0.dp, shape = RoundedCornerShape(16.dp), clip = false)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) CardWhite else Color.Transparent)
             .clickable(onClick = onClick).padding(vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, fontSize = 14.sp, color = if (selected) CardWhite else TextPrimary,
+        Text(text, fontSize = 14.sp, color = if (selected) WeChatGreen else TextSecondary,
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)
     }
 }

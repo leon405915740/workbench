@@ -56,6 +56,7 @@ import com.accounting.app.ui.model.ChatMessage
 import com.accounting.app.ui.model.LearnDialogData
 import com.accounting.app.ui.model.UiState
 import com.accounting.app.ui.theme.BackgroundGray
+import com.accounting.app.ui.theme.BorderDefault
 import com.accounting.app.ui.theme.BubbleAi
 import com.accounting.app.ui.theme.BubbleError
 import com.accounting.app.ui.theme.BubbleUser
@@ -73,7 +74,7 @@ fun ChatScreen(
     uiState: UiState,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
-    onEditCategory: (ChatMessage.CardMessage) -> Unit,
+    onEditRecord: (ChatMessage.CardMessage) -> Unit,
     onDelete: (Long, String) -> Unit,
     onManualEntry: (String) -> Unit,
     onLearnKeyword: (ChatMessage.CardMessage) -> Unit,
@@ -111,13 +112,13 @@ fun ChatScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "\uD83D\uDCB0",
-                            fontSize = 36.sp
+                            fontSize = 48.sp
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "输入消费内容，例如：午饭 25 元 麦当劳",
                             fontSize = 14.sp,
-                            color = TextSecondary,
+                            color = TextPrimary,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -146,7 +147,7 @@ fun ChatScreen(
                             is ChatMessage.CardMessage -> {
                                 ExpenseCard(
                                     message = message,
-                                    onEditCategory = { onEditCategory(message) },
+                                    onEditRecord = { onEditRecord(message) },
                                     onDelete = { onDelete(message.recordId, message.type) },
                                     onLearnKeyword = {
                                         onLearnKeyword(message)
@@ -422,12 +423,12 @@ private fun BottomInputBar(
                 singleLine = true,
                 shape = RoundedCornerShape(22.dp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = BackgroundGray,
-                    unfocusedContainerColor = BackgroundGray,
-                    disabledContainerColor = BackgroundGray,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
+                    focusedContainerColor = CardWhite,
+                    unfocusedContainerColor = CardWhite,
+                    disabledContainerColor = CardWhite,
+                    focusedIndicatorColor = WeChatGreen,
+                    unfocusedIndicatorColor = BorderDefault,
+                    disabledIndicatorColor = BorderDefault
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send)
             )

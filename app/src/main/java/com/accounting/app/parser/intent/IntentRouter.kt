@@ -3,6 +3,7 @@ package com.accounting.app.parser.intent
 import com.accounting.app.data.model.BillExecutePlan
 import com.accounting.app.data.model.BillPlanItem
 import com.accounting.app.data.model.PlanAction
+import com.accounting.app.data.repository.AppRepository
 import com.accounting.app.domain.classification.CategoryService
 import com.accounting.app.parser.category.ClassificationService
 import com.accounting.app.parser.intent.MappingMatchResult
@@ -20,7 +21,8 @@ import java.util.Date
 
 class IntentRouter(
     private val planBuilder: PlanBuilder,
-    private val aiPlanner: AiPlanner
+    private val aiPlanner: AiPlanner,
+    private val repository: AppRepository
 ) {
 
     suspend fun route(input: String, requestId: String): RoutingResult {
@@ -30,9 +32,12 @@ class IntentRouter(
         }
 
         val mappingResult = MappingMatcher.match("expense", trimmed, requestId)
+        if (mappingResult != null && mappingResult.mappingId != null) {
+            repository.incrementMappingHitCount(mappingResult.mappingId, requestId)
+        }
         if (mappingResult != null && mappingResult.confidence > 0.9f) {
             val plan = buildPlanFromMapping(mappingResult, requestId, trimmed)
-            val categoryName = CategoryService.getCategoryById(mappingResult.categoryId)?.name ?: "其他"
+            val categoryName = CategoryService.getCategoryById(mappingResult.categoryId)?.name ?: "其他支出"
             AppLogger.d(requestId, "Layer1-映射匹配命中", "关键词: ${mappingResult.keyword}, 分类: $categoryName")
             AppLogger.decision(requestId, "意图路由", mappingResult.keyword, "映射匹配命中，路由到记账", mappingResult.confidence, "mapping")
             return RoutingResult.Success(plan, "mapping")
@@ -89,7 +94,7 @@ class IntentRouter(
             action = PlanAction.ADD,
             type = "expense",
             amount = amountFen,
-            category = category?.name ?: "其他",
+            category = category?.name ?: "其他支出",
             subCategory = subcategory?.name,
             merchant = mapping.keyword,
             billTime = time,

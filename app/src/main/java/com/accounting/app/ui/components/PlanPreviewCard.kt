@@ -25,6 +25,7 @@ import com.accounting.app.data.model.BillExecutePlan
 import com.accounting.app.data.model.BillPlanItem
 import com.accounting.app.data.model.PlanAction
 import com.accounting.app.ui.theme.*
+import com.accounting.app.ui.components.getCategoryEmoji
 import com.accounting.app.parser.amount.AmountUtils
 import com.accounting.app.parser.time.TimeUtils
 
@@ -153,7 +154,7 @@ private fun PlanItemRow(item: BillPlanItem, index: Int) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "${item.category}${item.subCategory?.let { "-$it" } ?: ""}",
+                    text = "${getCategoryEmoji(item.category, item.type)} ${item.category}${item.subCategory?.let { "-$it" } ?: ""}",
                     fontSize = 14.sp,
                     color = TextPrimary
                 )

@@ -28,10 +28,10 @@ interface CategoryMappingDao {
     suspend fun deleteById(id: Long)
 
     @Query("UPDATE category_mappings SET enabled = :enabled WHERE id = :id")
-    suspend fun updateEnabled(id: Long, enabled: Boolean)
+    suspend fun updateEnabled(id: Long, enabled: Boolean): Int
 
     @Query("UPDATE category_mappings SET source = 'MANUAL', hitCount = 1, updatedAt = :now WHERE id = :id")
-    suspend fun promoteToManual(id: Long, now: Long)
+    suspend fun promoteToManual(id: Long, now: Long): Int
 
     @Query("DELETE FROM category_mappings WHERE source = 'AUTO' AND (lastHitAt IS NULL OR lastHitAt < :beforeTime) AND hitCount < 3")
     suspend fun cleanStaleAutoMappings(beforeTime: Long): Int

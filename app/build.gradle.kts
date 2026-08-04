@@ -16,8 +16,8 @@ android {
         applicationId = "com.accounting.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 21
-        versionName = "2.11.0"
+        versionCode = 25
+        versionName = "2.13.1"
 
         // 从 local.properties 读取 DeepSeek API Key，编译期注入 BuildConfig.DEEPSEEK_API_KEY
         val localProperties = Properties().apply {

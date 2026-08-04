@@ -7,6 +7,7 @@ import com.accounting.app.data.local.database.AppDatabase
 import com.accounting.app.data.model.BillExecutePlan
 import com.accounting.app.domain.classification.CategoryService
 import com.accounting.app.log.AppLogger
+import com.accounting.app.log.CrashHandler
 import com.accounting.app.capture.CaptureNotificationManager
 import com.accounting.app.data.repository.AppRepository
 import kotlinx.coroutines.CoroutineScope
@@ -63,6 +64,7 @@ class AccountingApp : Application() {
         super.onCreate()
         instance = this
         AppLogger.init(this)
+        CrashHandler.init()
         AppLogger.i("", "应用启动", "Application onCreate")
         CaptureNotificationManager.initChannel(this)
         val db = AppDatabase.getInstance(this)

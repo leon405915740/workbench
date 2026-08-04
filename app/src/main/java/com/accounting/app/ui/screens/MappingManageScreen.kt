@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +55,7 @@ import com.accounting.app.data.local.entity.CategoryMappingEntity
 import com.accounting.app.ui.model.UiState
 import com.accounting.app.log.AppLogger
 import com.accounting.app.ui.theme.BackgroundGray
+import com.accounting.app.ui.theme.BorderDefault
 import com.accounting.app.ui.theme.CardWhite
 import com.accounting.app.ui.theme.NavActive
 import com.accounting.app.ui.theme.TextDelete
@@ -61,6 +63,7 @@ import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
 import com.accounting.app.ui.theme.DividerColor
+import com.accounting.app.ui.components.getCategoryEmoji
 
 @Composable
 fun MappingManageScreen(
@@ -282,8 +285,9 @@ private fun MappingTabButton(
     Box(
         modifier = modifier
             .heightIn(min = 40.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) NavActive else BackgroundGray)
+            .shadow(elevation = if (isSelected) 2.dp else 0.dp, shape = RoundedCornerShape(20.dp), clip = false)
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isSelected) CardWhite else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
@@ -291,7 +295,7 @@ private fun MappingTabButton(
         Text(
             text,
             fontSize = 14.sp,
-            color = if (isSelected) CardWhite else TextPrimary,
+            color = if (isSelected) WeChatGreen else TextSecondary,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
         )
     }
@@ -356,8 +360,9 @@ private fun MappingCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    val emoji = getCategoryEmoji(categoryName, mapping.type)
                     Text(
-                        text = "→ $categoryName${subCategoryName?.let { "-$it" } ?: ""}",
+                        text = "→ $emoji $categoryName${subCategoryName?.let { "-$it" } ?: ""}",
                         fontSize = 13.sp,
                         color = WeChatGreen
                     )
@@ -473,7 +478,7 @@ private fun AddMappingDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = WeChatGreen,
-                        unfocusedIndicatorColor = DividerColor
+                        unfocusedIndicatorColor = BorderDefault
                     )
                 )
                 Row(
@@ -552,8 +557,9 @@ private fun TypeTabButton(
     Box(
         modifier = modifier
             .heightIn(min = 36.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (selected) WeChatGreen else BackgroundGray)
+            .shadow(elevation = if (selected) 2.dp else 0.dp, shape = RoundedCornerShape(16.dp), clip = false)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) CardWhite else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center
@@ -561,7 +567,7 @@ private fun TypeTabButton(
         Text(
             text,
             fontSize = 14.sp,
-            color = if (selected) CardWhite else TextPrimary,
+            color = if (selected) WeChatGreen else TextSecondary,
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
         )
     }

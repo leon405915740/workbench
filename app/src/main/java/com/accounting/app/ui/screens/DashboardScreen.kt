@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -51,7 +52,7 @@ import com.accounting.app.ui.theme.TextIncome
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.DividerColor
-import com.accounting.app.ui.theme.SageGreen
+import com.accounting.app.ui.components.getCategoryEmoji
 import com.accounting.app.util.AmountUtils
 import com.accounting.app.util.TimeUtils
 import java.util.Calendar
@@ -71,11 +72,8 @@ import java.util.Calendar
 fun DashboardScreen(
     uiState: UiState,
     onSwitchTab: (DashTab) -> Unit,
-    onDeleteRecord: (Long, String) -> Unit
+    onEditRecord: (RecentRecord) -> Unit
 ) {
-    // 待删除记录，-1L 时无弹窗（拆解为基本类型以支持 rememberSaveable）
-    var pendingDeleteId by rememberSaveable { mutableStateOf(-1L) }
-    var pendingDeleteType by rememberSaveable { mutableStateOf("") }
     val isExpense = uiState.dashTab == DashTab.EXPENSE
     val dashListState = rememberLazyListState()
 
@@ -126,55 +124,13 @@ fun DashboardScreen(
                     RecentRecordItem(
                         record = record,
                         isExpense = isExpense,
-                        onClick = {
-                            pendingDeleteId = record.id
-                            pendingDeleteType = record.type
-                        }
+                        onClick = { onEditRecord(record) }
                     )
                 }
             }
         }
     }
 
-    // ===== 删除确认弹窗 =====
-    if (pendingDeleteId > 0) {
-        AlertDialog(
-            onDismissRequest = {
-                pendingDeleteId = -1L
-                pendingDeleteType = ""
-            },
-            title = {
-                Text(
-                    text = "删除记录",
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-            },
-            text = {
-                Text(
-                    text = "确认删除该记录？",
-                    color = TextSecondary
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDeleteRecord(pendingDeleteId, pendingDeleteType)
-                    pendingDeleteId = -1L
-                    pendingDeleteType = ""
-                }) {
-                    Text("删除", color = TextDelete)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    pendingDeleteId = -1L
-                    pendingDeleteType = ""
-                }) {
-                    Text("取消", color = TextSecondary)
-                }
-            }
-        )
-    }
 }
 
 /**
@@ -220,8 +176,12 @@ private fun DashTabButton(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) WeChatGreen else BackgroundGray)
+            .then(
+                if (isSelected) Modifier.shadow(elevation = 2.dp, shape = RoundedCornerShape(20.dp), clip = false)
+                else Modifier
+            )
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isSelected) CardWhite else Color.Transparent)
             .clickable { onClick() }
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
@@ -230,7 +190,7 @@ private fun DashTabButton(
             text = text,
             fontSize = 14.sp,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-            color = if (isSelected) CardWhite else TextSecondary
+            color = if (isSelected) WeChatGreen else TextSecondary
         )
     }
 }
@@ -254,9 +214,9 @@ private fun SummaryCard(uiState: UiState, isExpense: Boolean) {
 
     // 渐变：支出绿色系，收入蓝色系
     val gradient = if (isExpense) {
-        Brush.linearGradient(listOf(Color(0xFF8B91B0), WeChatGreen, WeChatGreenDark))
+        Brush.linearGradient(listOf(Color(0xFF7B7FBA), WeChatGreen, WeChatGreenDark))
     } else {
-        Brush.linearGradient(listOf(SageGreen, TextIncome, Color(0xFF496B61)))
+        Brush.linearGradient(listOf(Color(0xFF6FD4B8), TextIncome, Color(0xFF2E6B55)))
     }
 
     // 金额格式：支出无符号，收入带 + 前缀
@@ -268,6 +228,7 @@ private fun SummaryCard(uiState: UiState, isExpense: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(20.dp), clip = false)
             .background(gradient)
             .padding(24.dp)
     ) {
@@ -275,12 +236,12 @@ private fun SummaryCard(uiState: UiState, isExpense: Boolean) {
             Text(
                 text = if (isExpense) "本月支出" else "本月收入",
                 fontSize = 14.sp,
-                color = CardWhite.copy(alpha = 0.9f)
+                color = CardWhite.copy(alpha = 0.85f)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = monthText,
-                fontSize = 28.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = CardWhite
             )
@@ -305,7 +266,7 @@ private fun SummarySubItem(label: String, value: String) {
         Text(
             text = label,
             fontSize = 12.sp,
-            color = CardWhite.copy(alpha = 0.8f)
+            color = CardWhite.copy(alpha = 0.7f)
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
@@ -331,6 +292,7 @@ private fun CategoryStatsSection(uiState: UiState, isExpense: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp), clip = false)
             .clip(RoundedCornerShape(12.dp))
             .background(CardWhite)
             .padding(16.dp)
@@ -385,12 +347,18 @@ private fun CategoryRow(
     } else 0f
     val percent = (progress * 100).toInt()
     val amountText = formatAmount(amount, isExpense)
+    val type = if (isExpense) "expense" else "income"
 
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                text = getCategoryEmoji(name, type),
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = name,
                 fontSize = 14.sp,
@@ -418,8 +386,8 @@ private fun CategoryRow(
             progress = progress,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp)),
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
             color = progressColor,
             trackColor = DividerColor
         )
@@ -440,7 +408,7 @@ private fun RecentRecordItem(
     val amountText = formatAmount(record.amount, isExpense)
 
     // 分类名
-    val categoryText = record.category
+    val categoryText = "${getCategoryEmoji(record.category, record.type)} ${record.category}"
     // 商家 + 时间
     val infoText = buildString {
         record.merchant?.takeIf { it.isNotBlank() }?.let {
@@ -452,6 +420,7 @@ private fun RecentRecordItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp), clip = false)
             .clip(RoundedCornerShape(12.dp))
             .background(CardWhite)
             .clickable { onClick() }
@@ -499,14 +468,23 @@ private fun EmptyState() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
+            .padding(vertical = 48.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "暂无记录",
-            fontSize = 13.sp,
-            color = TextSecondary
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "📊",
+                fontSize = 48.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "暂无记录",
+                fontSize = 15.sp,
+                color = TextPrimary
+            )
+        }
     }
 }
 

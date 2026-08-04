@@ -1,0 +1,124 @@
+# Tasks
+
+- [x] Task 1: 修改 AppRepository 写入方法签名补 requestId 参数 + start/success/error 三阶段埋点（message 显式带 requestId，统一字段顺序：requestId, action, stage, result, 业务字段, rowsAffected, error）
+  - [ ] SubTask 1.1: `deleteExpense(id, requestId)` / `deleteIncome(id, requestId)`，三阶段埋点，格式：
+    - start：`requestId=X, action=DELETE, stage=start, id=X, type=expense`
+    - success：`requestId=X, action=DELETE, stage=success, result=success, id=X, type=expense`
+    - error：`requestId=X, action=DELETE, stage=error, result=failure, id=X, type=expense, error=<msg>`
+  - [ ] SubTask 1.2: `updateExpenseCategory(id, category, subcategory, requestId)` / `updateIncomeCategory(id, category, subcategory, requestId)`，三阶段埋点（rowsAffected=0 时仍打 stage=success），格式：
+    - start：`requestId=X, action=UPDATE_CATEGORY, stage=start, id=X, type=expense, category=Y`
+    - success：`requestId=X, action=UPDATE_CATEGORY, stage=success, result=success, id=X, type=expense, category=Y, rowsAffected=Z`
+    - error：`requestId=X, action=UPDATE_CATEGORY, stage=error, result=failure, id=X, type=expense, category=Y, error=<msg>`
+  - [ ] SubTask 1.3: `updateExpenseFull(..., requestId)` / `updateIncomeFull(..., requestId)`，三阶段埋点（含 rowsAffected，rowsAffected=0 时仍打 stage=success），格式：
+    - start：`requestId=X, action=UPDATE_FULL, stage=start, recordId=X, type=expense, amount=***, category=Y`
+    - success：`requestId=X, action=UPDATE_FULL, stage=success, result=success, recordId=X, type=expense, category=Y, rowsAffected=Z`
+    - error：`requestId=X, action=UPDATE_FULL, stage=error, result=failure, recordId=X, type=expense, error=<msg>`
+  - [ ] SubTask 1.4: 映射 CRUD 方法补 requestId + 三阶段埋点（逐个列出）：
+    - `upsertMapping(mapping, requestId)` → `requestId=X, action=UPSERT_MAPPING, stage=..., keyword=X, type=Y, source=Z`
+    - `deleteMappingById(id, requestId)` → `requestId=X, action=DELETE_MAPPING, stage=..., id=X`
+    - `updateMappingEnabled(id, enabled, requestId)` → `requestId=X, action=UPDATE_MAPPING_ENABLED, stage=..., id=X, enabled=Y, rowsAffected=Z`
+    - `promoteMappingToManual(id, requestId)` → `requestId=X, action=PROMOTE_MAPPING, stage=..., id=X, rowsAffected=Z`
+    - `cleanStaleAutoMappings(beforeTime, requestId)` → `requestId=X, action=CLEAN_STALE_MAPPINGS, stage=..., beforeTime=X, rowsAffected=Y`
+    - `incrementMappingHitCount(id, requestId)` → `requestId=X, action=INCREMENT_MAPPING_HIT, stage=..., id=X`
+  - [ ] SubTask 1.5: 记忆 CRUD 方法补 requestId + 三阶段埋点（逐个列出）：
+    - `upsertMemory(memory, requestId)` → `requestId=X, action=UPSERT_MEMORY, stage=..., triggerWord=X, type=Y, category=Z`
+    - `deleteMemory(id, requestId)` → `requestId=X, action=DELETE_MEMORY, stage=..., id=X`
+    - `deleteAllMemories(requestId)` → `requestId=X, action=DELETE_ALL_MEMORIES, stage=...`
+    - `reseedMemories(requestId)` → `requestId=X, action=RESEED_MEMORIES, stage=...`
+    - `incrementMemoryHitCount(id, requestId)` → `requestId=X, action=INCREMENT_MEMORY_HIT, stage=..., id=X`
+  - [ ] SubTask 1.6: `setApiKey(key, requestId)` + `maskApiKey` 脱敏打印（空 Key 返回 `<empty>`，短 Key 返回 `****`），三阶段埋点，格式：
+    - start：`requestId=X, action=SET_API_KEY, stage=start, key=sk-12****cdef`
+    - success：`requestId=X, action=SET_API_KEY, stage=success, result=success, key=sk-12****cdef`
+    - error：`requestId=X, action=SET_API_KEY, stage=error, result=failure, key=sk-12****cdef, error=<msg>`
+
+- [x] Task 2: 修改 MainViewModel 写入入口补埋点（生成 requestId + start/success/error 日志 + 透传，统一字段顺序：requestId, action, stage, result, 业务字段, error）
+  - [ ] SubTask 2.1: `deleteRecord(recordId, type)` 入口生成 requestId（唯一生成位置），打印 `requestId=X, action=DELETE_RECORD, stage=start, recordId=X, type=Y`，透传给 `repository.deleteExpense(id, requestId)` / `deleteIncome(id, requestId)`，success/error 日志
+  - [ ] SubTask 2.2: `addMemory(triggerWord, type, category)` 生成 requestId + start/success/error 埋点 + 透传给 `repository.upsertMemory(memory, requestId)`
+  - [ ] SubTask 2.3: `deleteMemory(id)` 生成 requestId + start/success/error 埋点 + 透传给 `repository.deleteMemory(id, requestId)`
+  - [ ] SubTask 2.4: `clearAllMemories()` 生成 requestId + start/success/error 埋点 + 透传给 `repository.deleteAllMemories(requestId)`
+  - [ ] SubTask 2.5: `restoreDefaultMemories()` 生成 requestId + start/success/error 埋点 + 透传给 `repository.reseedMemories(requestId)`
+  - [ ] SubTask 2.6: `saveApiKey(key)` 生成 requestId + `maskApiKey` 脱敏日志（空 Key `<empty>`、短 Key `****`）+ 透传给 `repository.setApiKey(key, requestId)`
+  - [ ] SubTask 2.7: `confirmLearnKeyword(triggerWord, type, category)` 生成 requestId + start/success/error 埋点 + 透传给 `repository.upsertMemory(memory, requestId)`
+  - [ ] SubTask 2.8: `sendMessage` 内 `incrementMemoryHitCount(result.memoryId)` 调用透传 requestId（使用 sendMessage 已生成的 requestId，sendMessage 方法返回后 requestId 不再使用）
+  - [ ] SubTask 2.9: `confirmEditRecord` 内 `upsertMemory` 调用透传 requestId（使用 confirmEditRecord 已生成的 requestId）
+
+- [x] Task 3: 调整 AiPlanner 日志级别
+  - [ ] SubTask 3.1: `parse` 方法解析失败日志 `d` → `w`（L21）
+  - [ ] SubTask 3.2: `parseJson` JSON 解析失败日志 `d` → `w`（L96）
+
+- [x] Task 4: 优化 BillTransaction 日志内容（含 error 阶段）
+  - [ ] SubTask 4.1: `insert` 三阶段日志 message 显式带 requestId + id/type/category，格式：
+    - start：`requestId=X, action=INSERT, stage=start, id=Y, type=Z, category=W`
+    - success：`requestId=X, action=INSERT, stage=success, result=success, id=Y, type=Z, category=W`
+    - error：`requestId=X, action=INSERT, stage=error, result=failure, id=Y, type=Z, category=W, error=<msg>`
+  - [ ] SubTask 4.2: `update` 三阶段日志（保持与 insert 一致格式，action=UPDATE）
+  - [ ] SubTask 4.3: `delete` 三阶段日志（保持与 insert 一致格式，action=DELETE）
+  - [ ] SubTask 4.4: 移除「金额已脱敏」描述（金额由 sanitizeLog 自动脱敏）
+
+- [x] Task 5: 扫描所有 repository 写操作调用点（按写操作语义判断，业务层入口包裹 requestId）
+  - [ ] SubTask 5.1: Grep `repository\.` / `appRepository\.` 在以下目录的所有调用：
+    - `ui/screens/`（DashboardScreen / ChatScreen / SettingsScreen / MappingManageScreen / MemoryManageScreen / categorymanagescreen）
+    - `ui/components/`（所有 Component）
+    - `MainActivity.kt`
+    - `capture/`（PaymentAccessibilityService / CaptureDispatcher / CaptureNotificationManager）
+    - `domain/`（CategoryService / RuleSuggestion）
+    - `plan/`（PlanBuilder / PlanMerger / PlanExecutor）
+    - `parser/`（所有 matcher / parser）
+  - [ ] SubTask 5.2: 对每个调用点按「写操作语义」判断（任何会修改数据库状态的操作，不论方法名前缀，包括 insert/update/delete/upsert/clean/reseed/promote/increment/setApiKey 等）
+  - [ ] SubTask 5.3: 写入方法的调用必须由业务层入口包裹（ViewModel / PlanExecutor / IntentRouter / 业务 Service），业务层入口负责生成 requestId 并透传；UI Screen / Activity 直接调用需迁移到业务层入口
+  - [ ] SubTask 5.4: 业务层入口已存在但无 requestId 的（如 PlanExecutor / IntentRouter），补 requestId 生成与透传
+  - [ ] SubTask 5.5: 输出扫描报告：调用点清单 + 处理方式（迁移到哪个业务层入口 / 补 requestId / 无需处理）
+
+- [x] Task 6: 编译验证 + 版本号更新
+  - [ ] SubTask 6.1: `gradlew assembleDebug` 编译通过
+  - [ ] SubTask 6.2: 更新 versionCode +1 / versionName 调整
+  - [ ] SubTask 6.3: APK 输出文件名 `记账_v{versionName}_debug.apk` 校验
+
+- [x] Task 7: 全链路验收测试（含失败链路 + requestId 唯一性）
+  - [ ] SubTask 7.1: 用户记账全链路（成功）：sendMessage → parseAccountingInput → routeIntent → buildPlan → AiPlanner → ClassificationService → insertExpense → incrementMemoryHitCount，验证同一 requestId 贯穿
+  - [ ] SubTask 7.2: 用户记账全链路（失败）：sendMessage → 解析失败/入库异常，验证失败分支使用同一 requestId 且打印 stage=error 日志
+  - [ ] SubTask 7.3: 编辑账单全链路（成功）：confirmEditRecord → updateExpenseFull → upsertMemory，验证同一 requestId
+  - [ ] SubTask 7.4: 编辑账单全链路（rowsAffected=0）：confirmEditRecord → updateExpenseFull 返回 rowsAffected=0，验证 stage=success 日志含 rowsAffected=0
+  - [ ] SubTask 7.5: 删除账单全链路（成功）：deleteRecord → deleteExpense，验证 requestId 生成与透传
+  - [ ] SubTask 7.6: 删除账单全链路（失败）：deleteRecord → deleteExpense 异常，验证 stage=error 日志
+  - [ ] SubTask 7.7: 记忆管理全链路（成功+失败）：addMemory/deleteMemory/clearAllMemories/restoreDefaultMemories → repository，验证 requestId 生成与透传，失败分支打印 stage=error
+  - [ ] SubTask 7.8: API Key 保存全链路（成功+失败+边界）：saveApiKey → setApiKey，验证脱敏 + requestId，空 Key（`<empty>`）/ 短 Key（`****`）/ 失败分支
+  - [ ] SubTask 7.9: 关键词学习全链路（成功+失败）：confirmLearnKeyword → upsertMemory，验证 requestId 生成与透传
+  - [ ] SubTask 7.10: requestId 唯一性验收：同一用户操作全链路中 requestId 不重复生成（grep 日志，每个操作仅出现一次 requestId 生成日志）
+  - [ ] SubTask 7.11: requestId 唯一性验收：不同用户操作生成不同 requestId（连续操作两次，验证 requestId 不同）
+  - [ ] SubTask 7.12: 日志字段顺序校验：所有新增日志符合 `requestId, action, stage, result, 业务字段, rowsAffected, error` 顺序
+  - [ ] SubTask 7.13: 脱敏校验：grep 日志文件无明文 API Key
+  - [ ] SubTask 7.14: grep 验证：所有 AppRepository 写入方法均带 requestId 参数（无遗漏）
+  - [ ] SubTask 7.15: grep 验证：无直接调用 `Log.d/e/i/w`（范围限制：排除 `app/src/main/java/com/accounting/app/log/` 目录 + `build/` + `test/` + `androidTest/`，仅 log 目录内部允许使用 android.util.Log）
+
+- [x] Task 8: 验收发现的问题修复（基于 Task 7 验收报告）
+  - [x] SubTask 8.1: 修复 4 个 DAO 方法返回 Int（rowsAffected）
+    - `ExpenseDao.updateCategory`：Unit → Int
+    - `IncomeDao.updateCategory`：Unit → Int
+    - `CategoryMappingDao.updateEnabled`：Unit → Int
+    - `CategoryMappingDao.promoteToManual`：Unit → Int
+  - [x] SubTask 8.2: 修复 4 个 AppRepository 方法捕获 rowsAffected 并打印
+    - `updateExpenseCategory`：捕获 rowsAffected，success 日志补 `rowsAffected=$rowsAffected`
+    - `updateIncomeCategory`：同上
+    - `updateMappingEnabled`：同上
+    - `promoteMappingToManual`：同上
+  - [x] SubTask 8.3: 修复 MainViewModel.sendMessage 日志格式
+    - L168 start 日志：`requestId=$requestId, action=SEND_MESSAGE, stage=start, input=$rawInput`
+    - L249/L262 error 日志：`requestId=$requestId, action=INSERT, stage=error, result=failure, billIndex=$billIndex, type=expense/income, error=${e.message}`
+  - [x] SubTask 8.4: 修复 MainViewModel.confirmEditRecord 日志格式 + rowsAffected=0 处理 + error 日志
+    - L379 start 日志：`requestId=$requestId, action=UPDATE_FULL, stage=start, recordId=$recordId, type=..., category=...`
+    - L399 rowsAffected=0：`AppLogger.w` → `AppLogger.i`，message 改为 `requestId=$requestId, action=UPDATE_FULL, stage=success, result=success, recordId=$recordId, rowsAffected=0`
+    - L404 success 日志：`requestId=$requestId, action=UPDATE_FULL, stage=success, result=success, recordId=$recordId, rowsAffected=$rowsAffected`
+    - 补 try-catch 包裹 updateExpenseFull/updateIncomeFull，error 日志：`requestId=$requestId, action=UPDATE_FULL, stage=error, result=failure, recordId=$recordId, error=${e.message}`
+  - [x] SubTask 8.5: 修复 MainViewModel.sendMessage 异常分支
+    - parseAccountingInput 调用补 try-catch，error 日志：`requestId=$requestId, action=PARSE, stage=error, result=failure, error=${e.message}`
+    - incrementMemoryHitCount 调用补 try-catch，error 日志：`requestId=$requestId, action=INCREMENT_MEMORY_HIT, stage=error, result=failure, id=${result.memoryId}, error=${e.message}`
+    - chatQuery 调用补 try-catch，error 日志：`requestId=$requestId, action=CHAT_QUERY, stage=error, result=failure, error=${e.message}`
+
+# Task Dependencies
+
+- Task 2 依赖 Task 1（ViewModel 调用 repository 新签名）
+- Task 5 依赖 Task 1（扫描需对照新签名）
+- Task 6 依赖 Task 1~5 全部完成
+- Task 7 依赖 Task 6（编译通过后验收）
+- Task 3 / Task 4 可与 Task 1 / Task 2 并行（独立文件）

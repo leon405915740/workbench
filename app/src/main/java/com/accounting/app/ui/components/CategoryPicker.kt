@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,51 +40,37 @@ import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
 import com.accounting.app.util.CategoryConstants
+import com.accounting.app.ui.components.getCategoryEmoji
 
 /**
- * 两级分类选择器（弹窗）。
+ * 单级分类选择器（弹窗）。
  *
- * - 一级分类按钮组：选中态绿色背景白字，未选中浅灰背景深灰字
- * - 二级分类联动：点击已选中的二级分类可取消选中（返回 null）
- * - 底部绿色全宽确认按钮
- *
+ * v4.0：已删除二级分类，仅展示单级分类网格。
+ * 选中态绿色背景白字，未选中浅灰背景深灰字。
  * 入参 type 决定使用 expense 还是 income 的分类列表。
  */
 @Composable
 fun CategoryPicker(
     type: String,
     initialCategory: String? = null,
-    initialSubcategory: String? = null,
-    onConfirm: (String, String?) -> Unit,
+    onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // 一级分类列表
+    // 分类列表
     val categories = CategoryConstants.getCategories(type)
-    // 当前选中的一级分类，初始为 initialCategory（若不在列表则取第一项）
+    // 当前选中
     var selectedCategory by rememberSaveable {
         mutableStateOf(initialCategory?.takeIf { it in categories } ?: categories.firstOrNull() ?: "")
-    }
-    // 二级分类列表（联动）
-    val subcategories = remember(selectedCategory) {
-        CategoryConstants.getSubcategories(selectedCategory)
-    }
-    // 当前选中的二级分类，初始为 initialSubcategory（需属于当前一级分类下）
-    var selectedSubcategory by rememberSaveable {
-        mutableStateOf(
-            if (initialCategory == selectedCategory && initialSubcategory in subcategories) {
-                initialSubcategory
-            } else null
-        )
     }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             color = CardWhite
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // 标题栏：选择分类 + 关闭按钮
+                // 标题栏
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -108,57 +93,28 @@ fun CategoryPicker(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 内容区可滚动，限制最大高度避免超出屏幕
+                // 分类网格（可滚动）
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 400.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text(
-                        text = "一级分类",
-                        fontSize = 13.sp,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
                     CategoryButtonGroup(
                         items = categories,
                         selected = selectedCategory,
-                        onSelect = {
-                            if (it != selectedCategory) {
-                                selectedCategory = it
-                                // 一级分类变化时清空二级分类
-                                selectedSubcategory = null
-                            }
-                        }
+                        type = type,
+                        onSelect = { selectedCategory = it }
                     )
-
-                    if (subcategories.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "二级分类（可选）",
-                            fontSize = 13.sp,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CategoryButtonGroup(
-                            items = subcategories,
-                            selected = selectedSubcategory,
-                            onSelect = { item ->
-                                // 再次点击当前已选项 = 取消选中
-                                selectedSubcategory = if (item == selectedSubcategory) null else item
-                            }
-                        )
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 底部确认按钮（绿色全宽）
+                // 确认按钮
                 Button(
                     onClick = {
                         if (selectedCategory.isNotBlank()) {
-                            onConfirm(selectedCategory, selectedSubcategory)
+                            onConfirm(selectedCategory)
                         }
                     },
                     enabled = selectedCategory.isNotBlank(),
@@ -184,12 +140,12 @@ fun CategoryPicker(
 
 /**
  * 分类按钮组：每行 3 个按钮，自动换行。
- * 选中态绿色背景白字，未选中浅灰背景深灰字。
  */
 @Composable
 private fun CategoryButtonGroup(
     items: List<String>,
     selected: String?,
+    type: String,
     onSelect: (String) -> Unit
 ) {
     val rows = items.chunked(3)
@@ -201,22 +157,31 @@ private fun CategoryButtonGroup(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 40.dp)
+                            .heightIn(min = 48.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isSelected) WeChatGreen else BackgroundGray)
                             .clickable { onSelect(item) }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = item,
-                            fontSize = 13.sp,
-                            color = if (isSelected) CardWhite else TextPrimary,
-                            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = getCategoryEmoji(item, type),
+                                fontSize = 20.sp
+                            )
+                            Text(
+                                text = item,
+                                fontSize = 12.sp,
+                                color = if (isSelected) CardWhite else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                            )
+                        }
                     }
                 }
-                // 不足 3 个时填充空位以保持每行宽度一致
+                // 不足 3 个时填充空位
                 repeat(3 - rowItems.size) {
                     Spacer(modifier = Modifier.weight(1f))
                 }

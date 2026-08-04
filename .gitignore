@@ -25,3 +25,8 @@ local.properties
 /ui-mockup/
 extract.py
 .superpowers/
+# 构建日志和运行日志
+*.log
+build_room261.log
+记账日志_*.txt
+.workbuddy/

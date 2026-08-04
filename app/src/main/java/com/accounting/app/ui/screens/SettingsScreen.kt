@@ -46,11 +46,13 @@ import com.accounting.app.BuildConfig
 import com.accounting.app.log.AppLogger
 import com.accounting.app.ui.model.UiState
 import com.accounting.app.ui.theme.BackgroundGray
+import com.accounting.app.ui.theme.BorderDefault
 import com.accounting.app.ui.theme.CardWhite
 import com.accounting.app.ui.theme.DividerColor
 import com.accounting.app.ui.theme.NavActive
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
+import com.accounting.app.ui.theme.WeChatGreen
 
 /**
  * 设置主页面。
@@ -232,7 +234,7 @@ fun SettingsScreen(
                     onRestoreMemories()
                     showRestoreDialog = false
                 }) {
-                    Text("确认", color = NavActive)
+                    Text("确认", color = WeChatGreen)
                 }
             },
             dismissButton = {
@@ -251,9 +253,9 @@ fun SettingsScreen(
 private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(content = content)
     }
@@ -345,8 +347,8 @@ private fun ApiKeyDialog(
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = NavActive,
-                    unfocusedIndicatorColor = DividerColor
+                    focusedIndicatorColor = WeChatGreen,
+                    unfocusedIndicatorColor = BorderDefault
                 )
             )
         },

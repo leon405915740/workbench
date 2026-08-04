@@ -18,7 +18,7 @@ class AiPlanner(
             val json = callDeepSeek(systemPrompt, userPrompt, requestId)
             parseJson(json, requestId)
         } catch (e: Exception) {
-            AppLogger.d(requestId, "AI解析", "解析失败，返回空结果：${e.message}")
+            AppLogger.w(requestId, "AI解析", "解析失败，返回空结果：${e.message}")
             com.accounting.app.ai.model.AiOutput()
         }
     }
@@ -93,7 +93,7 @@ class AiPlanner(
             val parsed = Gson().fromJson(cleaned, com.accounting.app.ai.model.AiOutput::class.java)
             sanitizeTimeHints(parsed, requestId)
         } catch (e: Exception) {
-            AppLogger.d(requestId, "AI解析", "JSON解析失败，返回空结果：${e.message}")
+            AppLogger.w(requestId, "AI解析", "JSON解析失败，返回空结果：${e.message}")
             com.accounting.app.ai.model.AiOutput()
         }
     }

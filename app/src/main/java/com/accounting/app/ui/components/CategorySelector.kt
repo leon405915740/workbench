@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.accounting.app.ui.theme.WeChatGreen
+import com.accounting.app.ui.components.getCategoryEmoji
 
 /** ID 型分类选择器，供分类映射管理页使用。 */
 @Composable
@@ -27,8 +28,9 @@ fun CategorySelector(
     Column(modifier = modifier) {
         Text(if (type == "income") "收入分类" else "支出分类")
         rootCategories.forEach { (name, id) ->
+            val emoji = getCategoryEmoji(name, type)
             Text(
-                text = if (id == selectedCategoryId) "✓ $name" else name,
+                text = if (id == selectedCategoryId) "✓ $emoji $name" else "$emoji $name",
                 color = if (id == selectedCategoryId) WeChatGreen else Color.Unspecified,
                 modifier = Modifier.fillMaxWidth().clickable { onCategorySelected(id) }.padding(vertical = 8.dp)
             )
@@ -36,8 +38,9 @@ fun CategorySelector(
         selectedCategoryId?.let { categoryId ->
             subcategories[categoryId].orEmpty().forEach { (name, id) ->
                 Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp)) {
+                    val emoji = getSubcategoryEmoji(name, type, rootCategories.find { it.second == categoryId }?.first)
                     Text(
-                        text = if (id == selectedSubcategoryId) "✓ $name" else name,
+                        text = if (id == selectedSubcategoryId) "✓ $emoji $name" else "$emoji $name",
                         color = if (id == selectedSubcategoryId) WeChatGreen else Color.Unspecified,
                         modifier = Modifier.clickable { onSubcategorySelected(id) }.padding(vertical = 6.dp)
                     )

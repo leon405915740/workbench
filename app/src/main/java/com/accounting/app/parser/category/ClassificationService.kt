@@ -12,28 +12,28 @@ import java.util.Date
 
 object ClassificationService {
 
+    var aiClassifier: AiClassifier? = null
+
     suspend fun match(request: MatchRequest, requestId: String, billIndex: Int? = null): MatchResult {
         val mappingResult = MappingMatcher.match("expense", request.description, requestId, billIndex ?: 1)
         if (mappingResult != null) {
             val category = CategoryService.getCategoryById(mappingResult.categoryId)
-            val subcategory = mappingResult.subcategoryId?.let { CategoryService.getCategoryById(it) }
-            val categoryName = category?.name ?: "其他"
-            val subcategoryName = subcategory?.name
-            val message = "待匹配：${request.description}，来源：mapping，分类：$categoryName，最终分类：$categoryName"
+            val categoryName = category?.name ?: "其他支出"
+            val message = "待匹配：${request.description}，来源：mapping，分类：$categoryName"
             if (billIndex != null) AppLogger.d(requestId, "分类匹配", message, billIndex)
             else AppLogger.d(requestId, "分类匹配", message)
             return MatchResult(
                 type = "expense",
                 category = categoryName,
-                subCategory = subcategoryName,
+                subCategory = null,
                 source = MatchSource.MAPPING,
                 confidence = mappingResult.confidence
             )
         }
 
         val ruleResult = RuleMatcher.match(request, requestId, billIndex)
-        if (ruleResult != null && ruleResult.confidence > 0.9f) {
-            if (ruleResult.category != "其他") {
+        if (ruleResult != null && ruleResult.confidence >= 0.9f) {
+            if (ruleResult.category != "其他支出") {
                 return ruleResult
             }
         }
@@ -62,6 +62,20 @@ object ClassificationService {
             }
         }
 
+        // AI 兜底分类纠正
+        val aiClassifier = this.aiClassifier
+        if (aiClassifier != null) {
+            val aiResult = aiClassifier.correct(request.description, requestId, billIndex)
+            if (aiResult != null) {
+                val aiMessage = "待匹配：${request.description}，来源：ai_correction，分类：${aiResult.category}，最终分类：${aiResult.category}"
+                if (billIndex != null) AppLogger.d(requestId, "分类匹配", aiMessage, billIndex)
+                else AppLogger.d(requestId, "分类匹配", aiMessage)
+                if (billIndex != null) AppLogger.decision(requestId, "分类匹配", request.description, "AI兜底纠正，分类:${aiResult.category}", 0.6f, "ai_correction", billIndex)
+                else AppLogger.decision(requestId, "分类匹配", request.description, "AI兜底纠正，分类:${aiResult.category}", 0.6f, "ai_correction")
+                return aiResult
+            }
+        }
+
         val fallbackCategory = getDefaultCategory(request.time)
         val message = "待匹配：${request.description}，来源：fallback，分类：$fallbackCategory，最终分类：$fallbackCategory"
         if (billIndex != null) AppLogger.d(requestId, "分类匹配", message, billIndex)
@@ -77,6 +91,6 @@ object ClassificationService {
     }
 
     private fun getDefaultCategory(@Suppress("UNUSED_PARAMETER") time: Date): String {
-        return "其他"
+        return "其他支出"
     }
 }

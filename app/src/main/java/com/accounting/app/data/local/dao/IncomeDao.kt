@@ -39,7 +39,14 @@ interface IncomeDao {
     fun getAll(): Flow<List<IncomeEntity>>
 
     @Query("UPDATE income SET category = :category, subcategory = :subcategory WHERE id = :id")
-    suspend fun updateCategory(id: Long, category: String, subcategory: String?)
+    suspend fun updateCategory(id: Long, category: String, subcategory: String?): Int
+
+    /**
+     * 按 id 全字段更新收入（不修改 confidence / rawInput / createdAt）。
+     * 返回受影响行数：1=更新成功，0=id 不存在。
+     */
+    @Query("UPDATE income SET amount = :amount, category = :category, subcategory = :subcategory, merchant = :merchant, time = :time, note = :note WHERE id = :id")
+    suspend fun updateAllFields(id: Long, amount: Long, category: String, subcategory: String?, merchant: String?, time: Long, note: String?): Int
 
     @Query("SELECT SUM(amount) FROM income WHERE time >= :startTime AND time < :endTime")
     fun getSumByTimeRange(startTime: Long, endTime: Long): Flow<Long?>

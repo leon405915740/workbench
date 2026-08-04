@@ -4,6 +4,8 @@ import android.content.Context
 import com.accounting.app.data.local.dao.CategoryAmount
 import com.accounting.app.data.local.database.AppDatabase
 import com.accounting.app.data.local.entity.CategoryMappingEntity
+import com.accounting.app.data.local.entity.CategoryMemoryEntity
+import com.accounting.app.data.local.database.SeedData
 import com.accounting.app.data.local.entity.ExpenseEntity
 import com.accounting.app.data.local.entity.IncomeEntity
 import com.accounting.app.data.local.pref.UserPreferences
@@ -13,6 +15,8 @@ import com.accounting.app.data.remote.RetrofitClient
 import com.accounting.app.data.remote.model.ChatMessage
 import com.accounting.app.data.remote.model.ChatRequest
 import com.accounting.app.data.model.BillExecutePlan
+import com.accounting.app.parser.category.AiClassifier
+import com.accounting.app.parser.category.ClassificationService
 import com.accounting.app.parser.intent.MappingMatcher
 import com.accounting.app.plan.execution.BillTransaction
 import com.accounting.app.plan.execution.PlanExecutor
@@ -61,7 +65,8 @@ sealed class ParseResult {
         val note: String?,
         val confidence: Float,
         val matchedMemory: Boolean,
-        val memoryId: Long? = null  // 命中记忆的 id，用于入库成功后 hitCount +1
+        val memoryId: Long? = null,  // 命中记忆的 id，用于入库成功后 hitCount +1
+        val source: String = ""
     ) : ParseResult()
 
     /** 解析失败，reason 描述失败原因供 UI 提示。 */
@@ -86,20 +91,22 @@ class AppRepository(private val context: Context) {
     private val database = AppDatabase.getInstance(context)
     private val expenseDao = database.expenseDao()
     private val incomeDao = database.incomeDao()
+    private val categoryMemoryDao = database.categoryMemoryDao()
     private val categoryMappingDao = database.categoryMappingDao()
     private val userPrefs = UserPreferences(context)
     private val deepSeekApi: DeepSeekApi = RetrofitClient.create()
 
-    private val aiPlanner = AiPlanner(deepSeekApi) { getApiKey() }
+    private val aiPlanner = AiPlanner(RetrofitClient.createPlannerApi()) { getApiKey() }
     private val planBuilder = PlanBuilder(aiPlanner)
     private val planExecutor = PlanExecutor(
         database,
         BillTransaction(expenseDao, incomeDao)
     )
-    private val intentRouter = IntentRouter(planBuilder, aiPlanner)
+    private val intentRouter = IntentRouter(planBuilder, aiPlanner, this)
 
     init {
         MappingMatcher.init(this)
+        ClassificationService.aiClassifier = AiClassifier { getApiKey() }
     }
 
     // 暴露 userPrefs 给 ViewModel 用于聊天记录持久化
@@ -174,18 +181,84 @@ class AppRepository(private val context: Context) {
     }
 
     /** 按 id 删除支出 */
-    suspend fun deleteExpense(id: Long) = expenseDao.deleteById(id)
+    suspend fun deleteExpense(id: Long, requestId: String) {
+        AppLogger.d(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=start, id=$id, type=expense")
+        try {
+            expenseDao.deleteById(id)
+            AppLogger.i(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=success, result=success, id=$id, type=expense")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=error, result=failure, id=$id, type=expense, error=${e.message}", e)
+            throw e
+        }
+    }
 
     /** 按 id 删除收入 */
-    suspend fun deleteIncome(id: Long) = incomeDao.deleteById(id)
+    suspend fun deleteIncome(id: Long, requestId: String) {
+        AppLogger.d(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=start, id=$id, type=income")
+        try {
+            incomeDao.deleteById(id)
+            AppLogger.i(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=success, result=success, id=$id, type=income")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=error, result=failure, id=$id, type=income, error=${e.message}", e)
+            throw e
+        }
+    }
 
     /** 修改支出分类 */
-    suspend fun updateExpenseCategory(id: Long, category: String, subcategory: String?) =
-        expenseDao.updateCategory(id, category, subcategory)
+    suspend fun updateExpenseCategory(id: Long, category: String, subcategory: String?, requestId: String) {
+        AppLogger.d(requestId, "分类更新执行", "requestId=$requestId, action=UPDATE_CATEGORY, stage=start, id=$id, type=expense, category=$category, subcategory=$subcategory")
+        try {
+            val rowsAffected = expenseDao.updateCategory(id, category, subcategory)
+            AppLogger.i(requestId, "分类更新执行", "requestId=$requestId, action=UPDATE_CATEGORY, stage=success, result=success, id=$id, type=expense, category=$category, rowsAffected=$rowsAffected")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "分类更新执行", "requestId=$requestId, action=UPDATE_CATEGORY, stage=error, result=failure, id=$id, type=expense, category=$category, subcategory=$subcategory, error=${e.message}", e)
+            throw e
+        }
+    }
 
     /** 修改收入分类 */
-    suspend fun updateIncomeCategory(id: Long, category: String, subcategory: String?) =
-        incomeDao.updateCategory(id, category, subcategory)
+    suspend fun updateIncomeCategory(id: Long, category: String, subcategory: String?, requestId: String) {
+        AppLogger.d(requestId, "分类更新执行", "requestId=$requestId, action=UPDATE_CATEGORY, stage=start, id=$id, type=income, category=$category, subcategory=$subcategory")
+        try {
+            val rowsAffected = incomeDao.updateCategory(id, category, subcategory)
+            AppLogger.i(requestId, "分类更新执行", "requestId=$requestId, action=UPDATE_CATEGORY, stage=success, result=success, id=$id, type=income, category=$category, rowsAffected=$rowsAffected")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "分类更新执行", "requestId=$requestId, action=UPDATE_CATEGORY, stage=error, result=failure, id=$id, type=income, category=$category, subcategory=$subcategory, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    /** 全字段更新支出（不修改 confidence / rawInput / createdAt），返回受影响行数 */
+    suspend fun updateExpenseFull(
+        id: Long, amount: Long, category: String, subcategory: String?,
+        merchant: String?, time: Long, note: String?, requestId: String
+    ): Int {
+        AppLogger.d(requestId, "全字段更新执行", "requestId=$requestId, action=UPDATE_FULL, stage=start, id=$id, type=expense, category=$category")
+        return try {
+            val rowsAffected = expenseDao.updateAllFields(id, amount, category, subcategory, merchant, time, note)
+            AppLogger.i(requestId, "全字段更新执行", "requestId=$requestId, action=UPDATE_FULL, stage=success, result=success, id=$id, type=expense, category=$category, rowsAffected=$rowsAffected")
+            rowsAffected
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "全字段更新执行", "requestId=$requestId, action=UPDATE_FULL, stage=error, result=failure, id=$id, type=expense, category=$category, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    /** 全字段更新收入（不修改 confidence / rawInput / createdAt），返回受影响行数 */
+    suspend fun updateIncomeFull(
+        id: Long, amount: Long, category: String, subcategory: String?,
+        merchant: String?, time: Long, note: String?, requestId: String
+    ): Int {
+        AppLogger.d(requestId, "全字段更新执行", "requestId=$requestId, action=UPDATE_FULL, stage=start, id=$id, type=income, category=$category")
+        return try {
+            val rowsAffected = incomeDao.updateAllFields(id, amount, category, subcategory, merchant, time, note)
+            AppLogger.i(requestId, "全字段更新执行", "requestId=$requestId, action=UPDATE_FULL, stage=success, result=success, id=$id, type=income, category=$category, rowsAffected=$rowsAffected")
+            rowsAffected
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "全字段更新执行", "requestId=$requestId, action=UPDATE_FULL, stage=error, result=failure, id=$id, type=income, category=$category, error=${e.message}", e)
+            throw e
+        }
+    }
 
     /** 获取最近 limit 条支出 */
     fun getRecentExpenses(limit: Int): Flow<List<ExpenseEntity>> = expenseDao.getRecent(limit)
@@ -223,7 +296,17 @@ class AppRepository(private val context: Context) {
 
     // ===================== 分类映射操作 =====================
 
-    suspend fun upsertMapping(mapping: CategoryMappingEntity) = categoryMappingDao.upsert(mapping)
+    suspend fun upsertMapping(mapping: CategoryMappingEntity, requestId: String): Long {
+        AppLogger.d(requestId, "映射写入", "requestId=$requestId, action=UPSERT_MAPPING, stage=start, type=${mapping.type}, keyword=${mapping.keyword}, source=${mapping.source}")
+        return try {
+            val id = categoryMappingDao.upsert(mapping)
+            AppLogger.i(requestId, "映射写入", "requestId=$requestId, action=UPSERT_MAPPING, stage=success, result=success, id=$id, type=${mapping.type}, keyword=${mapping.keyword}")
+            id
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "映射写入", "requestId=$requestId, action=UPSERT_MAPPING, stage=error, result=failure, type=${mapping.type}, keyword=${mapping.keyword}, error=${e.message}", e)
+            throw e
+        }
+    }
 
     suspend fun matchMapping(type: String, text: String): CategoryMappingEntity? =
         categoryMappingDao.match(type, text)
@@ -233,22 +316,126 @@ class AppRepository(private val context: Context) {
 
     suspend fun getAllMappings(): List<CategoryMappingEntity> = categoryMappingDao.getAll()
 
-    suspend fun deleteMappingById(id: Long) = categoryMappingDao.deleteById(id)
+    suspend fun deleteMappingById(id: Long, requestId: String) {
+        AppLogger.d(requestId, "映射删除", "requestId=$requestId, action=DELETE_MAPPING, stage=start, id=$id")
+        try {
+            categoryMappingDao.deleteById(id)
+            AppLogger.i(requestId, "映射删除", "requestId=$requestId, action=DELETE_MAPPING, stage=success, result=success, id=$id")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "映射删除", "requestId=$requestId, action=DELETE_MAPPING, stage=error, result=failure, id=$id, error=${e.message}", e)
+            throw e
+        }
+    }
 
-    suspend fun updateMappingEnabled(id: Long, enabled: Boolean) =
-        categoryMappingDao.updateEnabled(id, enabled)
+    suspend fun updateMappingEnabled(id: Long, enabled: Boolean, requestId: String) {
+        AppLogger.d(requestId, "映射启用更新", "requestId=$requestId, action=UPDATE_MAPPING_ENABLED, stage=start, id=$id, enabled=$enabled")
+        try {
+            val rowsAffected = categoryMappingDao.updateEnabled(id, enabled)
+            AppLogger.i(requestId, "映射启用更新", "requestId=$requestId, action=UPDATE_MAPPING_ENABLED, stage=success, result=success, id=$id, enabled=$enabled, rowsAffected=$rowsAffected")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "映射启用更新", "requestId=$requestId, action=UPDATE_MAPPING_ENABLED, stage=error, result=failure, id=$id, enabled=$enabled, error=${e.message}", e)
+            throw e
+        }
+    }
 
-    suspend fun promoteMappingToManual(id: Long) =
-        categoryMappingDao.promoteToManual(id, TimeUtils.now())
+    suspend fun promoteMappingToManual(id: Long, requestId: String) {
+        AppLogger.d(requestId, "映射提升", "requestId=$requestId, action=PROMOTE_MAPPING, stage=start, id=$id")
+        try {
+            val rowsAffected = categoryMappingDao.promoteToManual(id, TimeUtils.now())
+            AppLogger.i(requestId, "映射提升", "requestId=$requestId, action=PROMOTE_MAPPING, stage=success, result=success, id=$id, rowsAffected=$rowsAffected")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "映射提升", "requestId=$requestId, action=PROMOTE_MAPPING, stage=error, result=failure, id=$id, error=${e.message}", e)
+            throw e
+        }
+    }
 
-    suspend fun cleanStaleAutoMappings(beforeTime: Long): Int =
-        categoryMappingDao.cleanStaleAutoMappings(beforeTime)
+    suspend fun cleanStaleAutoMappings(beforeTime: Long, requestId: String): Int {
+        AppLogger.d(requestId, "清理过期映射", "requestId=$requestId, action=CLEAN_STALE_MAPPINGS, stage=start, beforeTime=$beforeTime")
+        return try {
+            val rowsAffected = categoryMappingDao.cleanStaleAutoMappings(beforeTime)
+            AppLogger.i(requestId, "清理过期映射", "requestId=$requestId, action=CLEAN_STALE_MAPPINGS, stage=success, result=success, rowsAffected=$rowsAffected")
+            rowsAffected
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "清理过期映射", "requestId=$requestId, action=CLEAN_STALE_MAPPINGS, stage=error, result=failure, error=${e.message}", e)
+            throw e
+        }
+    }
 
     suspend fun findMappingByKeywordAndType(keyword: String, type: String): CategoryMappingEntity? =
         categoryMappingDao.findByKeywordAndType(keyword, type)
 
-    suspend fun incrementMappingHitCount(id: Long) =
-        categoryMappingDao.incrementHitCount(id, TimeUtils.now())
+    suspend fun incrementMappingHitCount(id: Long, requestId: String) {
+        AppLogger.d(requestId, "映射命中自增", "requestId=$requestId, action=INCREMENT_MAPPING_HIT, stage=start, id=$id")
+        try {
+            categoryMappingDao.incrementHitCount(id, TimeUtils.now())
+            AppLogger.i(requestId, "映射命中自增", "requestId=$requestId, action=INCREMENT_MAPPING_HIT, stage=success, result=success, id=$id")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "映射命中自增", "requestId=$requestId, action=INCREMENT_MAPPING_HIT, stage=error, result=failure, id=$id, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    fun getAllMemoriesByType(type: String): Flow<List<CategoryMemoryEntity>> = categoryMemoryDao.getAllByType(type)
+
+    suspend fun upsertMemory(memory: CategoryMemoryEntity, requestId: String): Long {
+        AppLogger.d(requestId, "记忆写入", "requestId=$requestId, action=UPSERT_MEMORY, stage=start, type=${memory.type}, triggerWord=${memory.triggerWord}, category=${memory.category}, source=${memory.source}")
+        return try {
+            val id = categoryMemoryDao.upsert(memory)
+            AppLogger.i(requestId, "记忆写入", "requestId=$requestId, action=UPSERT_MEMORY, stage=success, result=success, id=$id, type=${memory.type}, triggerWord=${memory.triggerWord}, category=${memory.category}")
+            id
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "记忆写入", "requestId=$requestId, action=UPSERT_MEMORY, stage=error, result=failure, type=${memory.type}, triggerWord=${memory.triggerWord}, category=${memory.category}, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    suspend fun deleteMemory(id: Long, requestId: String) {
+        AppLogger.d(requestId, "记忆删除", "requestId=$requestId, action=DELETE_MEMORY, stage=start, id=$id")
+        try {
+            categoryMemoryDao.deleteById(id)
+            AppLogger.i(requestId, "记忆删除", "requestId=$requestId, action=DELETE_MEMORY, stage=success, result=success, id=$id")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "记忆删除", "requestId=$requestId, action=DELETE_MEMORY, stage=error, result=failure, id=$id, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    suspend fun deleteAllMemories(requestId: String) {
+        AppLogger.d(requestId, "全量记忆删除", "requestId=$requestId, action=DELETE_ALL_MEMORIES, stage=start")
+        try {
+            categoryMemoryDao.deleteAll()
+            AppLogger.i(requestId, "全量记忆删除", "requestId=$requestId, action=DELETE_ALL_MEMORIES, stage=success, result=success")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "全量记忆删除", "requestId=$requestId, action=DELETE_ALL_MEMORIES, stage=error, result=failure, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    suspend fun reseedMemories(requestId: String) {
+        AppLogger.d(requestId, "记忆重置", "requestId=$requestId, action=RESEED_MEMORIES, stage=start")
+        try {
+            categoryMemoryDao.deleteAll()
+            categoryMemoryDao.insertAll(SeedData.seedMemories)
+            AppLogger.i(requestId, "记忆重置", "requestId=$requestId, action=RESEED_MEMORIES, stage=success, result=success")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "记忆重置", "requestId=$requestId, action=RESEED_MEMORIES, stage=error, result=failure, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    suspend fun incrementMemoryHitCount(id: Long, requestId: String) {
+        AppLogger.d(requestId, "记忆命中自增", "requestId=$requestId, action=INCREMENT_MEMORY_HIT, stage=start, id=$id")
+        try {
+            categoryMemoryDao.incrementHitCount(id, TimeUtils.now())
+            AppLogger.i(requestId, "记忆命中自增", "requestId=$requestId, action=INCREMENT_MEMORY_HIT, stage=success, result=success, id=$id")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "记忆命中自增", "requestId=$requestId, action=INCREMENT_MEMORY_HIT, stage=error, result=failure, id=$id, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    fun normalizeCategoryForMemory(@Suppress("UNUSED_PARAMETER") category: String, subcategory: String?): String? =
+        subcategory?.trim()?.takeIf { it.isNotEmpty() }
 
     // ===================== API Key 管理 =====================
 
@@ -261,7 +448,17 @@ class AppRepository(private val context: Context) {
     }
 
     /** 写入用户配置的 API Key 到 DataStore */
-    suspend fun setApiKey(key: String) = userPrefs.setApiKey(key)
+    suspend fun setApiKey(key: String, requestId: String) {
+        val maskedKey = if (key.isEmpty()) "<empty>" else AppLogger.maskApiKey(key)
+        AppLogger.d(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=start, apiKey=$maskedKey")
+        try {
+            userPrefs.setApiKey(key)
+            AppLogger.i(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=success, result=success, apiKey=$maskedKey")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=error, result=failure, apiKey=$maskedKey, error=${e.message}", e)
+            throw e
+        }
+    }
 
     /** 判断触发词是否在黑名单中（公开，供 ViewModel 调用） */
     fun isValidTriggerWord(word: String): Boolean {
@@ -297,6 +494,29 @@ class AppRepository(private val context: Context) {
      */
     suspend fun routeIntent(rawInput: String, requestId: String): RoutingResult {
         return intentRouter.route(rawInput, requestId)
+    }
+
+    suspend fun parseAccountingInput(rawInput: String, requestId: String): List<ParseResult> {
+        val plan = when (val routed = routeIntent(rawInput, requestId)) {
+            is RoutingResult.Success -> routed.plan
+            is RoutingResult.AiSuccess -> routed.plan
+            is RoutingResult.Failure -> return listOf(ParseResult.Failure(routed.reason))
+        }
+        return plan.items.map { item ->
+            ParseResult.Success(
+                type = item.type,
+                amount = item.amount,
+                category = item.category,
+                subcategory = item.subCategory,
+                merchant = item.merchant,
+                time = item.billTime,
+                note = item.remark,
+                confidence = item.confidence,
+                matchedMemory = item.matchedMemory,
+                memoryId = item.memoryId,
+                source = item.source
+            )
+        }
     }
 
     // ===================== AI 对话查询 =====================

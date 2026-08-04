@@ -52,15 +52,15 @@ object RuleMatcher {
             )
         }
 
-        for ((keyword, catPair) in CategoryConstants.builtinSceneMap) {
+        val sceneMap = if (type == "income") CategoryConstants.builtinIncomeSceneMap else CategoryConstants.builtinExpenseSceneMap
+        for ((keyword, categoryName) in sceneMap) {
             if (request.description.contains(keyword)) {
-                val message = "待匹配：${request.description}，触发词：${keyword}，来源：rule，分类：${catPair.first}-${catPair.second}，最终分类：${catPair.first}-${catPair.second}"
+                val message = "待匹配：${request.description}，触发词：${keyword}，来源：rule，分类：${categoryName}，最终分类：${categoryName}"
                 if (billIndex != null) AppLogger.d(requestId, "分类匹配", message, billIndex)
                 else AppLogger.d(requestId, "分类匹配", message)
                 return MatchResult(
                     type = type,
-                    category = catPair.first,
-                    subCategory = catPair.second,
+                    category = categoryName,
                     source = MatchSource.RULE,
                     confidence = 0.9f
                 )

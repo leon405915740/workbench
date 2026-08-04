@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
  * - 全局单例，统一收口所有日志打印入口
  * - 一次用户输入生成唯一 requestId，贯穿整条请求链路，可按 ID 精确检索
  * - 多笔拆分场景通过 billIndex 透传，区分同一 requestId 下的不同账单
- * - Release 包自动关闭日志，避免性能损耗与信息泄露
+ * - Release 包默认关闭"详细日志"（DEBUG/INFO/WARN），但 ERROR 与 CRASH 始终落盘，可设置页开启详细日志
  * - API Key 等敏感信息调用 [maskApiKey] 显式脱敏
  * - 超长 message 自动截断，前缀（requestId / node / 笔序号）始终完整保留
  * - 日志自动写入本地文件，支持导出分享
@@ -36,8 +36,13 @@ object AppLogger {
     /** 全局 Logcat 过滤 Tag */
     private const val TAG = "AccountingApp"
 
-    /** 日志总开关：Debug 包开启，Release 包自动关闭 */
-    private val enableLog = BuildConfig.DEBUG
+    /** 详细日志开关（DEBUG/INFO/WARN/决策日志）：默认跟随构建类型，可在设置页运行时切换并持久化 */
+    @Volatile
+    private var debugLogEnabled = BuildConfig.DEBUG
+
+    /** 日志开关持久化 Key */
+    private const val PREFS_NAME = "app_logger_prefs"
+    private const val KEY_DEBUG_LOG = "debug_log_enabled"
 
     /** 单条日志 message 主体最大长度（不含前缀），超过自动截断 */
     private const val MAX_MESSAGE_LENGTH = 2000
@@ -71,7 +76,43 @@ object AppLogger {
      */
     fun init(context: Context) {
         appContext = context.applicationContext
+        // 读取持久化的日志开关（默认跟随构建类型）
+        val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        debugLogEnabled = prefs.getBoolean(KEY_DEBUG_LOG, BuildConfig.DEBUG)
         cleanOldLogs()
+    }
+
+    /**
+     * 设置详细日志开关（运行时切换，立即持久化）。
+     * 注意：ERROR 与 CRASH 级别不受此开关影响，始终写入文件。
+     */
+    fun setDebugLogEnabled(enabled: Boolean) {
+        debugLogEnabled = enabled
+        if (::appContext.isInitialized) {
+            appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_DEBUG_LOG, enabled)
+                .apply()
+        }
+    }
+
+    /** 当前详细日志是否开启 */
+    fun isDebugLogEnabled(): Boolean = debugLogEnabled
+
+    /**
+     * 记录未捕获崩溃。始终写入日志文件（绕过详细日志开关），
+     * 便于 Release 包在崩溃后通过日志导出排查问题。
+     *
+     * @param throwable 崩溃异常
+     * @param extraInfo 可选的上下文信息（如当前页面、用户操作）
+     */
+    fun logCrash(throwable: Throwable, extraInfo: String = "") {
+        if (!::appContext.isInitialized) return
+        val header = buildString {
+            append("应用崩溃捕获: ${throwable.javaClass.name}: ${throwable.message ?: "无消息"}")
+            if (extraInfo.isNotBlank()) append("\n上下文: $extraInfo")
+        }
+        saveLogToFile("CRASH", TAG, header, throwable)
     }
 
     /**
@@ -255,7 +296,9 @@ object AppLogger {
         billIndex: Int? = null,
         extraThrowable: Throwable? = null
     ) {
-        if (!enableLog) return
+        // ERROR 级别始终写入（即使 Release 包关闭了详细日志），保证崩溃/关键错误可排查
+        val alwaysWrite = level == LogLevel.ERROR
+        if (!debugLogEnabled && !alwaysWrite) return
 
         val finalThrowable = throwable ?: extraThrowable
 
@@ -279,7 +322,7 @@ object AppLogger {
             LogLevel.ERROR -> Log.e(TAG, finalMessage, finalThrowable)
         }
 
-        // 预留扩展位：本地日志文件输出（当前版本不实现）
+        // 异步写入本地日志文件（ERROR 级及以上始终落盘）
         saveLogToFile(level.name, TAG, finalMessage, finalThrowable)
     }
 

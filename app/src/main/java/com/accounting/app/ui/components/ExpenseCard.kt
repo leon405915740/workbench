@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.accounting.app.ui.model.ChatMessage
 import com.accounting.app.ui.theme.CardWhite
+import com.accounting.app.ui.components.getCategoryEmoji
 import com.accounting.app.ui.theme.ConfidenceHigh
 import com.accounting.app.ui.theme.ConfidenceLow
 import com.accounting.app.ui.theme.ConfidenceMedium
@@ -43,7 +44,7 @@ import com.accounting.app.util.TimeUtils
 @Composable
 fun ExpenseCard(
     message: ChatMessage.CardMessage,
-    onEditCategory: () -> Unit,
+    onEditRecord: () -> Unit,
     onDelete: () -> Unit,
     onLearnKeyword: (() -> Unit)? = null
 ) {
@@ -81,13 +82,14 @@ fun ExpenseCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val categoryText = buildString {
-                        append(message.category)
-                        message.subcategory?.takeIf { it.isNotBlank() }?.let {
-                            append(" · ").append(it)
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = getCategoryEmoji(message.category, message.type),
+                            fontSize = 18.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = message.category, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     }
-                    Text(text = categoryText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     if (message.matchedMemory) {
                         Box(
                             modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(WeChatGreenLight).padding(horizontal = 8.dp, vertical = 2.dp)
@@ -101,7 +103,7 @@ fun ExpenseCard(
 
                 Text(
                     text = "$amountPrefix${AmountUtils.fenToYuanWithSymbol(message.amount)}",
-                    fontSize = 24.sp, fontWeight = FontWeight.Bold, color = amountColor
+                    fontSize = 26.sp, fontWeight = FontWeight.Bold, color = amountColor
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -111,6 +113,12 @@ fun ExpenseCard(
                     append(TimeUtils.formatTimeRelative(message.recordTime))
                 }
                 Text(text = infoText, fontSize = 12.sp, color = TextSecondary)
+
+                // 备注（如果有）
+                message.note?.takeIf { it.isNotBlank() }?.let { note ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = note, fontSize = 13.sp, color = TextSecondary)
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -123,11 +131,11 @@ fun ExpenseCard(
                     }
                     repeat(dots) { i ->
                         Box(
-                            modifier = Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(
+                            modifier = Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(
                                 if (i < filledIndex) confidenceColor else confidenceColor.copy(alpha = 0.2f)
                             )
                         )
-                        if (i < dots - 1) Spacer(modifier = Modifier.width(4.dp))
+                        if (i < dots - 1) Spacer(modifier = Modifier.width(5.dp))
                     }
                 }
 
@@ -140,8 +148,8 @@ fun ExpenseCard(
                         }
                     }
                     Row(horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onEditCategory) {
-                            Text("修改分类", color = TextPrimary, fontSize = 13.sp)
+                        TextButton(onClick = onEditRecord) {
+                            Text("编辑", color = TextPrimary, fontSize = 13.sp)
                         }
                         Spacer(modifier = Modifier.width(2.dp))
                         TextButton(onClick = onDelete) {

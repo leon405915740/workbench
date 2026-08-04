@@ -58,6 +58,7 @@ import com.accounting.app.data.local.entity.CategoryEntity
 import com.accounting.app.ui.components.getCategoryEmoji
 import com.accounting.app.ui.components.getSubcategoryEmoji
 import com.accounting.app.ui.theme.BackgroundGray
+import com.accounting.app.ui.theme.BorderDefault
 import com.accounting.app.ui.theme.CardWhite
 import com.accounting.app.ui.theme.NavActive
 import com.accounting.app.ui.theme.TextDelete
@@ -289,7 +290,7 @@ private fun AddCategoryDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = WeChatGreen,
-                        unfocusedIndicatorColor = DividerColor
+                        unfocusedIndicatorColor = BorderDefault
                     )
                 )
 
@@ -389,7 +390,7 @@ private fun EditCategoryDialog(
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
                     focusedIndicatorColor = WeChatGreen,
-                    unfocusedIndicatorColor = DividerColor
+                    unfocusedIndicatorColor = BorderDefault
                 )
             )
         },
