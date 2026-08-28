@@ -21,5 +21,6 @@ data class IncomeEntity(
     val note: String?,          // 备注
     val confidence: Float,      // 置信度 0~1
     val rawInput: String,       // 用户原始输入
-    val createdAt: Long         // 创建时间
+    val createdAt: Long,        // 创建时间
+    val attachmentPath: String? = null  // 附加凭证图片（App 私有路径），空=无附件
 )

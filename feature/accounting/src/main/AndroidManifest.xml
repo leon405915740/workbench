@@ -6,6 +6,7 @@
             android:name="com.accounting.app.MainActivity"
             android:exported="false"
             android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.AccountingApp" />
 
         <service

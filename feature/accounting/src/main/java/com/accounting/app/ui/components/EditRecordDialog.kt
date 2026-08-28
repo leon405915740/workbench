@@ -2,6 +2,12 @@ package com.accounting.app.ui.components
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,11 +21,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,11 +37,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -41,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,9 +63,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.accounting.app.ui.model.EditDialogData
+import com.accounting.app.util.AttachmentStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.accounting.app.ui.theme.BackgroundGray
 import com.accounting.app.ui.theme.BorderDefault
 import com.accounting.app.ui.theme.CardWhite
+import com.accounting.app.ui.theme.TextDelete
 import com.accounting.app.ui.theme.TextPrimary
 import com.accounting.app.ui.theme.TextSecondary
 import com.accounting.app.ui.theme.WeChatGreen
@@ -104,6 +122,32 @@ fun EditRecordDialog(
     // 是否展示日期/时间选择器
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    // 附件凭证图片（App 私有路径，null=无附件）
+    var attachmentPath by rememberSaveable { mutableStateOf(data.attachmentPath) }
+    // 本弹窗会话内新落盘但尚未提交的临时文件，用于取消/替换时清理
+    var tempFilePath by remember { mutableStateOf<String?>(null) }
+    // 是否已提交（提交后不再清理临时文件，交由 Repository/数据库引用）
+    var committed by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val saved = AttachmentStore.save(context, uri)
+            if (saved != null) {
+                tempFilePath?.let { AttachmentStore.delete(context, it) }
+                tempFilePath = saved
+                attachmentPath = saved
+            }
+        }
+    }
+
+    // 弹窗销毁时清理未提交的临时文件，避免取消操作留下孤儿文件
+    DisposableEffect(Unit) {
+        onDispose {
+            if (!committed) tempFilePath?.let { AttachmentStore.delete(context, it) }
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -287,6 +331,58 @@ fun EditRecordDialog(
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
+
+                    // 凭证图片（选填，最多一张；用于留存小票/发票原图）
+                    Spacer(modifier = Modifier.height(6.dp))
+                    FieldLabel("凭证图片（选填）")
+                    val pickPhoto = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }
+                    if (attachmentPath == null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(BackgroundGray)
+                                .clickable { pickPhoto() }
+                                .padding(vertical = 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Add, contentDescription = null, tint = WeChatGreen)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("添加凭证图片（小票 / 发票）", fontSize = 13.sp, color = TextSecondary)
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AttachmentThumbnail(
+                                path = attachmentPath!!,
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                TextButton(onClick = { pickPhoto() }) {
+                                    Text("更换图片", fontSize = 13.sp, color = WeChatGreen)
+                                }
+                                TextButton(onClick = {
+                                    // 仅清理本会话新落的临时文件；原附件由 Repository 在提交时统一清理
+                                    tempFilePath?.let { AttachmentStore.delete(context, it) }
+                                    tempFilePath = null
+                                    attachmentPath = null
+                                }) {
+                                    Text("删除图片", fontSize = 13.sp, color = TextDelete)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -337,8 +433,10 @@ fun EditRecordDialog(
                                 category = category!!,
                                 merchant = merchant.takeIf { it.isNotBlank() },
                                 time = timeMillis,
-                                note = note.takeIf { it.isNotBlank() }
+                                note = note.takeIf { it.isNotBlank() },
+                                attachmentPath = attachmentPath
                             )
+                            committed = true
                             if (isEditMode) {
                                 onEditConfirm(updatedData)
                             } else {
@@ -465,4 +563,42 @@ private fun TypeTabButton(
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
         )
     }
+}
+
+/**
+ * 凭证图片缩略图：按目标尺寸采样解码，避免大图 OOM。
+ */
+@Composable
+private fun AttachmentThumbnail(path: String, modifier: Modifier = Modifier) {
+    val bitmap = produceState<Bitmap?>(initialValue = null, path) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { decodeSampled(path, 480) }.getOrNull()
+        }
+    }.value
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = "凭证图片",
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(
+            modifier = modifier.background(BackgroundGray),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("无法加载", fontSize = 11.sp, color = TextSecondary)
+        }
+    }
+}
+
+private fun decodeSampled(path: String, reqSize: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / sample > reqSize || bounds.outHeight / sample > reqSize) {
+        sample *= 2
+    }
+    return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
 }

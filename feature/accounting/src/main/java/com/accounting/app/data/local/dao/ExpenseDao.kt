@@ -46,6 +46,9 @@ interface ExpenseDao {
     @Query("UPDATE expense SET amount = :amount, category = :category, subcategory = :subcategory, merchant = :merchant, time = :time, note = :note WHERE id = :id")
     suspend fun updateAllFields(id: Long, amount: Long, category: String, subcategory: String?, merchant: String?, time: Long, note: String?): Int
 
+    @Query("UPDATE expense SET attachmentPath = :path WHERE id = :id")
+    suspend fun updateAttachment(id: Long, path: String?): Int
+
     @Query("SELECT SUM(amount) FROM expense WHERE time >= :startTime AND time < :endTime")
     fun getSumByTimeRange(startTime: Long, endTime: Long): Flow<Long?>
 

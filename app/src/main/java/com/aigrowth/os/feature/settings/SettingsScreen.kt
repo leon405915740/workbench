@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onOpenDrawer: () -> Unit = {},
     onNavigateToMemoryMapping: () -> Unit
 ) {
     val context = LocalContext.current
@@ -105,11 +104,6 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold,
                         color = Morandi.TextPrimary
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "菜单", tint = Morandi.TextPrimary)
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Morandi.BackgroundGray

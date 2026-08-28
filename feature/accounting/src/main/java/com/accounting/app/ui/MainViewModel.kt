@@ -29,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -318,9 +319,13 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                     if (_uiState.value.autoLearnEnabled && lastUnmatchedCard != null) {
                         openLearnDialog(lastUnmatchedCard)
                     }
-                    // 多笔拆分提示
-                    if (successCount > 1) {
-                        _uiState.update { it.copy(toast = "已自动拆分 ${successCount} 笔记账") }
+                    // 记账成功提示（单笔/多笔统一反馈，供财务主布局无聊天卡片时使用）
+                    _uiState.update {
+                        it.copy(toast = when {
+                            successCount > 1 -> "已自动拆分 ${successCount} 笔记账"
+                            successCount == 1 -> "已记账"
+                            else -> null
+                        })
                     }
                 }
                 persistChatHistory()
@@ -346,6 +351,11 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
 
     fun updateDashboardInput(text: String) {
         _uiState.update { it.copy(dashboardInputText = text) }
+    }
+
+    /** 财务主布局搜索关键词（不打断输入法组合态，由 UI 层在组合结束后触发） */
+    fun updateFinanceSearch(query: String) {
+        _uiState.update { it.copy(financeSearchQuery = query) }
     }
 
     fun sendDashboardQuery() {
@@ -429,7 +439,9 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                 amount = record.amount,
                 time = record.time,
                 note = record.note,
-                originalCategory = record.category
+                originalCategory = record.category,
+                attachmentPath = record.attachmentPath,
+                originalAttachmentPath = record.attachmentPath
             ))
         }
     }
@@ -476,6 +488,21 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             }
 
             AppLogger.i(requestId, "编辑账单", "requestId=$requestId, action=UPDATE_FULL, stage=success, result=success, recordId=$recordId, rowsAffected=$rowsAffected")
+
+            // 附件处理：仅在路径变化时写库（Repository 内清理被替换的旧文件）
+            if (updatedData.attachmentPath != updatedData.originalAttachmentPath) {
+                try {
+                    withContext(Dispatchers.IO) {
+                        if (updatedData.type == "expense") {
+                            repository.updateExpenseAttachment(recordId, updatedData.attachmentPath, requestId)
+                        } else {
+                            repository.updateIncomeAttachment(recordId, updatedData.attachmentPath, requestId)
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e(requestId, "编辑账单", "附件更新失败：${e.message}", e)
+                }
+            }
 
             // 记忆学习：仅分类变更时触发
             if (updatedData.category != updatedData.originalCategory) {
@@ -564,6 +591,13 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         }
     }
 
+    /** 财务主布局 AI 录入入口：直接以自然语言文本走现有解析/确认/入库链路 */
+    fun submitAiEntry(text: String) {
+        if (text.isBlank()) return
+        updateInputText(text)
+        sendMessage()
+    }
+
     /** 付款后唤起：根据通知解析出的金额/商家预填记账弹窗（type 固定支出） */
     fun openPaymentQuickEntry(amount: Long, merchant: String?) {
         val label = merchant?.takeIf { it.isNotBlank() } ?: "快捷记账"
@@ -591,7 +625,8 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
     fun submitManualEntry(
         type: String, amount: Long, category: String,
         merchant: String?, time: Long, note: String?, rawInput: String,
-        pendingRequestId: String? = null
+        pendingRequestId: String? = null,
+        attachmentPath: String? = null
     ) {
         // 手动记账：优先复用 AI 兜底透传的 requestId，否则单独生成
         val requestId = pendingRequestId ?: AppLogger.generateRequestId()
@@ -619,6 +654,19 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             } catch (e: Exception) {
                 AppLogger.e(requestId, "入库执行", "手动记账入库异常：${e.message}", e, billIndex)
                 return@launch
+            }
+            if (attachmentPath != null) {
+                try {
+                    withContext(Dispatchers.IO) {
+                        if (type == "expense") {
+                            repository.updateExpenseAttachment(recordId, attachmentPath, requestId)
+                        } else {
+                            repository.updateIncomeAttachment(recordId, attachmentPath, requestId)
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e(requestId, "入库执行", "附件写入失败：${e.message}", e, billIndex)
+                }
             }
             val triggerWord = extractTriggerWord(merchant)
             if (triggerWord != null) {
@@ -682,6 +730,18 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                 if (tab == DashTab.EXPENSE) repository.getRecentExpenses(20).map { list -> list.map { it.toRecentRecord("expense") } }
                 else repository.getRecentIncomes(20).map { list -> list.map { it.toRecentRecord("income") } }
             }.collect { records -> _uiState.update { it.copy(recentRecords = records) } }
+        }
+        // 财务主布局：收支合并，按时间倒序（全部账单）
+        viewModelScope.launch {
+            combine(
+                repository.getAllExpenses(),
+                repository.getAllIncomes()
+            ) { expenses, incomes ->
+                (expenses.map { it.toRecentRecord("expense") } + incomes.map { it.toRecentRecord("income") })
+                    .sortedByDescending { it.time }
+            }.collect { merged ->
+                _uiState.update { it.copy(financeRecords = merged) }
+            }
         }
     }
 
@@ -1158,13 +1218,15 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
     private fun ExpenseEntity.toRecentRecord(type: String) = RecentRecord(
         id = id, type = type, amount = amount, category = category,
         subcategory = subcategory, merchant = merchant, time = time,
-        note = note, confidence = confidence, matchedMemory = false, rawInput = rawInput
+        note = note, confidence = confidence, matchedMemory = false, rawInput = rawInput,
+        attachmentPath = attachmentPath
     )
 
     private fun IncomeEntity.toRecentRecord(type: String) = RecentRecord(
         id = id, type = type, amount = amount, category = category,
         subcategory = subcategory, merchant = merchant, time = time,
-        note = note, confidence = confidence, matchedMemory = false, rawInput = rawInput
+        note = note, confidence = confidence, matchedMemory = false, rawInput = rawInput,
+        attachmentPath = attachmentPath
     )
 
     companion object {

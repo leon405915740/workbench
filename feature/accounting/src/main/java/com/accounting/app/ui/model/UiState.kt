@@ -40,6 +40,10 @@ data class UiState(
     val categoryStats: List<CategoryAmount> = emptyList(),
     val recentRecords: List<RecentRecord> = emptyList(),
 
+    // ===== 财务主布局（统一响应式主区） =====
+    val financeRecords: List<RecentRecord> = emptyList(),  // 收支合并，按时间倒序（全部）
+    val financeSearchQuery: String = "",                   // 财务页搜索关键词
+
     // ===== Dashboard 聊天 =====
     val dashboardMessages: List<ChatMessage> = emptyList(),
     val dashboardInputText: String = "",
@@ -91,7 +95,8 @@ data class RecentRecord(
     val note: String?,        // 备注
     val confidence: Float,
     val matchedMemory: Boolean,
-    val rawInput: String
+    val rawInput: String,
+    val attachmentPath: String? = null  // 附加凭证图片（App 私有路径）
 )
 
 /**
@@ -116,7 +121,9 @@ data class EditDialogData(
     val time: Long,              // 时间戳（毫秒）
     val note: String?,           // 备注
     val originalCategory: String,// 打开编辑时的原分类（记忆学习用，新建模式为空）
-    val pendingRequestId: String? = null  // AI 确认流程透传的 requestId（null=非AI流程）
+    val pendingRequestId: String? = null,  // AI 确认流程透传的 requestId（null=非AI流程）
+    val attachmentPath: String? = null,          // 当前/待提交附件路径
+    val originalAttachmentPath: String? = null    // 打开编辑时的原附件（清理被替换文件用）
 )
 
 /**

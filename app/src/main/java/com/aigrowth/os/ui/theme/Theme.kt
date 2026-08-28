@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
- * 工作台主题：沿用记账 App 的莫兰迪雾蓝紫浅色体系。
+ * 工作台主题：暖白画布搭配低饱和薄荷、雾蓝与浅米色。
  * 关闭动态取色与深色模式，保证全局视觉一致。
  */
 private val MorandiColorScheme = lightColorScheme(
@@ -64,8 +64,12 @@ fun AIGrowthOSTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            window.statusBarColor = colorScheme.background.toArgb()
+            window.navigationBarColor = colorScheme.background.toArgb()
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = true
+                isAppearanceLightNavigationBars = true
+            }
         }
     }
 

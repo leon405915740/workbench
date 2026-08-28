@@ -1,9 +1,9 @@
 package com.aigrowth.os
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -14,78 +14,215 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
 import com.accounting.app.AccountingApp
-import com.accounting.app.MainScreen
 import com.accounting.app.ui.MainViewModel
+import com.accounting.app.ui.screens.FinanceScreen
 import com.accounting.app.ui.screens.MemoryMappingManageScreen
+import com.aigrowth.os.feature.clipping.ClippingScreen
+import com.aigrowth.os.feature.essay.EssayScreen
+import com.aigrowth.os.feature.exercise.ExerciseScreen
+import com.aigrowth.os.feature.habit.HabitScreen
+import com.aigrowth.os.feature.home.HomeScreen
+import com.aigrowth.os.feature.insight.InsightScreen
+import com.aigrowth.os.feature.plan.PlanScreen
+import com.aigrowth.os.feature.reading.ReadingScreen
 import com.aigrowth.os.feature.settings.MemoryMappingViewModel
 import com.aigrowth.os.feature.settings.SettingsScreen
-import com.aigrowth.os.feature.simple.*
-import kotlinx.coroutines.launch
 import com.aigrowth.os.ui.common.WorkbenchTopBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIGrowthOSApp() {
     val navController = rememberNavController()
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val openDrawer: () -> Unit = { scope.launch { drawerState.open() } }
-    ModalNavigationDrawer(drawerState = drawerState, drawerContent = {
-        SideNavigationDrawer(currentRoute) { route ->
-            scope.launch { drawerState.close() }
-            navController.navigate(route) { popUpTo(navController.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true }
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route?.substringBefore('?')
+    val activity = LocalContext.current as? ComponentActivity ?: return
+    val accountingViewModel = remember {
+        ViewModelProvider(activity, MainViewModel.factory(AccountingApp.getInstance().appRepository))
+            .get(MainViewModel::class.java)
+    }
+
+    val navigateTo: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
         }
-    }) {
-        NavHost(navController, startDestination = Screen.CheckIn.route, modifier = Modifier.fillMaxSize()) {
-            composable(Screen.CheckIn.route) { CheckInScreen(openDrawer) }
-            composable(Screen.Media.route) { MediaScreen(openDrawer) }
-            composable(Screen.English.route) { EnglishScreen(openDrawer) }
-            composable(Screen.Record.route) { RecordScreen(openDrawer) }
-            composable(Screen.Settings.route) { SettingsScreen(onOpenDrawer = openDrawer, onNavigateToMemoryMapping = { navController.navigate(Screen.MemoryMapping.route) }) }
-            composable(Screen.MemoryMapping.route) {
-                val vm: MemoryMappingViewModel = viewModel()
-                MemoryMappingManageScreen(memories = vm.memories.collectAsState().value, mappings = vm.mappings.collectAsState().value, memoryTotalCount = vm.memories.value.size, memorySourceFilter = vm.memorySourceFilter.collectAsState().value, expandedCategories = vm.expandedCategories.collectAsState().value, expenseCategories = vm.expenseCategories, incomeCategories = vm.incomeCategories, onAddMemory = vm::addMemory, onDeleteMemory = vm::deleteMemory, onClearAllMemories = vm::clearAllMemories, onRestoreDefaultMemories = vm::restoreDefaultMemories, onSearchMemories = vm::searchMemories, onToggleExpand = vm::toggleExpand, onSourceFilter = vm::setSourceFilter, onAddMapping = vm::addMapping, onDeleteMapping = vm::deleteMapping, onToggleMappingEnabled = vm::toggleMappingEnabled, onPromoteMappingToManual = vm::promoteMappingToManual, onCleanStaleAutoMappings = vm::cleanStaleAutoMappings, onBack = { navController.popBackStack() })
+    }
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val sidebarWidth = if (maxWidth < 600.dp) 64.dp else 72.dp
+        Row(Modifier.fillMaxSize()) {
+            SideNavigationBar(
+                currentRoute = currentRoute,
+                width = sidebarWidth,
+                onNavigate = navigateTo
+            )
+            Column(Modifier.weight(1f).fillMaxHeight()) {
+                Box(Modifier.weight(1f)) {
+                    NavHost(navController, startDestination = Screen.Home.route, modifier = Modifier.fillMaxSize()) {
+                        composable(Screen.Home.route) { HomeScreen(onNavigate = navigateTo) }
+                        composable(Screen.Plan.route) { PlanScreen() }
+                        composable(Screen.Habits.route) { HabitScreen() }
+                        composable(Screen.Reading.route) { ReadingScreen() }
+                        composable(Screen.Exercise.route) { ExerciseScreen() }
+                        composable(
+                            route = "${Screen.Record.route}?openAi={openAi}",
+                            arguments = listOf(navArgument("openAi") { type = NavType.BoolType; defaultValue = false })
+                        ) { backStackEntry ->
+                            RecordScreen(
+                                vm = accountingViewModel,
+                                openAiEntry = backStackEntry.arguments?.getBoolean("openAi") ?: false
+                            )
+                        }
+                        composable(Screen.Essay.route) { EssayScreen() }
+                        composable(Screen.Clipping.route) { ClippingScreen() }
+                        composable(Screen.Insight.route) { InsightScreen() }
+                        composable(Screen.Settings.route) { SettingsScreen(onNavigateToMemoryMapping = { navController.navigate(Screen.MemoryMapping.route) }) }
+                        composable(Screen.MemoryMapping.route) {
+                            val vm: MemoryMappingViewModel = viewModel()
+                            MemoryMappingManageScreen(memories = vm.memories.collectAsState().value, mappings = vm.mappings.collectAsState().value, memoryTotalCount = vm.memories.value.size, memorySourceFilter = vm.memorySourceFilter.collectAsState().value, expandedCategories = vm.expandedCategories.collectAsState().value, expenseCategories = vm.expenseCategories, incomeCategories = vm.incomeCategories, onAddMemory = vm::addMemory, onDeleteMemory = vm::deleteMemory, onClearAllMemories = vm::clearAllMemories, onRestoreDefaultMemories = vm::restoreDefaultMemories, onSearchMemories = vm::searchMemories, onToggleExpand = vm::toggleExpand, onSourceFilter = vm::setSourceFilter, onAddMapping = vm::addMapping, onDeleteMapping = vm::deleteMapping, onToggleMappingEnabled = vm::toggleMappingEnabled, onPromoteMappingToManual = vm::promoteMappingToManual, onCleanStaleAutoMappings = vm::cleanStaleAutoMappings, onBack = { navController.popBackStack() })
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun RecordScreen(onOpenDrawer: () -> Unit) {
-    val activity = androidx.compose.ui.platform.LocalContext.current as? ComponentActivity ?: return
-    val vm = remember { ViewModelProvider(activity, MainViewModel.factory(AccountingApp.getInstance().appRepository)).get(MainViewModel::class.java) }
+@Composable private fun RecordScreen(vm: MainViewModel, openAiEntry: Boolean = false) {
     Column(Modifier.fillMaxSize()) {
-        WorkbenchTopBar("记账", onOpenDrawer, "记录每一笔，让生活更有掌控感")
+        WorkbenchTopBar("记账", "记录每一笔，让生活更有掌控感")
         Box(Modifier.weight(1f)) {
-            MainScreen(vm)
+            FinanceScreen(viewModel = vm, openAiEntry = openAiEntry)
         }
     }
 }
 
 private data class NavItem(val route: String, val label: String, val icon: ImageVector)
-@Composable private fun SideNavigationDrawer(currentRoute: String?, onNavigate: (String) -> Unit) {
-    val items = listOf(NavItem(Screen.CheckIn.route, "健身打卡", Icons.Default.FitnessCenter), NavItem(Screen.Media.route, "自媒体", Icons.Default.VideoLibrary), NavItem(Screen.English.route, "学英语", Icons.Default.Translate), NavItem(Screen.Record.route, "记账", Icons.Default.AccountBalanceWallet))
-    ModalDrawerSheet(modifier = Modifier.width(132.dp), drawerContainerColor = Color(0xFFF0F5F1)) {
-        Column(Modifier.fillMaxHeight().padding(horizontal = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.padding(top = 20.dp, bottom = 24.dp).size(64.dp).background(Color(0xFFD6EAE2), RoundedCornerShape(32.dp)), contentAlignment = Alignment.Center) { Text("AI", style = MaterialTheme.typography.titleLarge, color = Color(0xFF397565)) }
+
+@Composable
+private fun SideNavigationBar(currentRoute: String?, width: androidx.compose.ui.unit.Dp, onNavigate: (String) -> Unit) {
+    val items = listOf(
+        NavItem(Screen.Home.route, "首页", Icons.Default.Home),
+        NavItem(Screen.Plan.route, "今日计划", Icons.Default.Checklist),
+        NavItem(Screen.Habits.route, "习惯打卡", Icons.Default.CheckCircle),
+        NavItem(Screen.Reading.route, "阅读", Icons.Default.MenuBook),
+        NavItem(Screen.Exercise.route, "运动", Icons.Default.DirectionsRun),
+        NavItem(Screen.Record.route, "记账", Icons.Default.AccountBalanceWallet),
+        NavItem(Screen.Essay.route, "随笔", Icons.Default.EditNote),
+        NavItem(Screen.Clipping.route, "剪报", Icons.Default.Article),
+        NavItem(Screen.Insight.route, "洞察", Icons.Default.Insights)
+    )
+    val selectedColor = Color(0xFF397565)
+    val inactiveColor = Color(0xFF687069)
+
+    Surface(
+        modifier = Modifier
+            .width(width)
+            .fillMaxHeight()
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Vertical)),
+        color = Color(0xFFF0F5F1),
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 20.dp, bottom = 24.dp)
+                    .size(width - 12.dp)
+                    .background(Color(0xFFD6EAE2), RoundedCornerShape(32.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🌱", style = MaterialTheme.typography.headlineSmall)
+            }
+
             items.forEach { item ->
                 val selected = currentRoute == item.route
-                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(if (selected) Color(0xFFDCEBE5) else Color.Transparent, RoundedCornerShape(18.dp)).clickable { onNavigate(item.route) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(item.icon, item.label, tint = if (selected) Color(0xFF397565) else Color(0xFF89918A), modifier = Modifier.size(25.dp))
-                    Text(item.label.substringBefore("打卡").take(3), style = MaterialTheme.typography.labelSmall, color = if (selected) Color(0xFF397565) else Color(0xFF687069))
-                }
+                DrawerItem(
+                    label = item.label,
+                    icon = item.icon,
+                    selected = selected,
+                    selectedColor = selectedColor,
+                    inactiveColor = inactiveColor,
+                    onClick = { onNavigate(item.route) }
+                )
             }
+
             Spacer(Modifier.weight(1f))
-            val selected = currentRoute == Screen.Settings.route
-            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(if (selected) Color(0xFFDCEBE5) else Color.Transparent, RoundedCornerShape(18.dp)).clickable { onNavigate(Screen.Settings.route) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.Default.Settings, "设置", tint = Color(0xFF89918A)); Text("设置", style = MaterialTheme.typography.labelSmall, color = Color(0xFF687069)) }
+            DrawerItem(
+                label = "设置",
+                icon = Icons.Default.Settings,
+                selected = currentRoute == Screen.Settings.route ||
+                    currentRoute == Screen.MemoryMapping.route,
+                selectedColor = selectedColor,
+                inactiveColor = inactiveColor,
+                onClick = { onNavigate(Screen.Settings.route) }
+            )
             Spacer(Modifier.height(12.dp))
         }
     }
 }
 
-sealed class Screen(val route: String) { data object CheckIn : Screen("checkin"); data object Media : Screen("media"); data object English : Screen("english"); data object Record : Screen("record"); data object Settings : Screen("settings"); data object MemoryMapping : Screen("memory_mapping") }
+@Composable
+private fun DrawerItem(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    selectedColor: Color,
+    inactiveColor: Color,
+    onClick: () -> Unit
+) {
+    val contentColor = if (selected) selectedColor else inactiveColor
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .background(
+                color = if (selected) Color(0xFFDCEBE5) else Color.Transparent,
+                shape = RoundedCornerShape(18.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(25.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            textAlign = TextAlign.Center,
+            maxLines = 2
+        )
+    }
+}
+
+sealed class Screen(val route: String) {
+    data object Home : Screen("home")
+    data object Plan : Screen("plan")
+    data object Habits : Screen("habits")
+    data object Reading : Screen("reading")
+    data object Exercise : Screen("exercise")
+    data object Record : Screen("record")
+    data object Essay : Screen("essay")
+    data object Clipping : Screen("clipping")
+    data object Insight : Screen("insight")
+    data object Settings : Screen("settings")
+    data object MemoryMapping : Screen("memory_mapping")
+}

@@ -28,6 +28,7 @@ import com.accounting.app.parser.intent.IntentRouter
 import com.accounting.app.parser.model.RoutingResult
 import com.accounting.app.log.AppLogger
 import com.accounting.app.util.AmountUtils
+import com.accounting.app.util.AttachmentStore
 import com.accounting.app.parser.time.TimeUtils
 import com.accounting.app.data.local.pref.PersistedMessage
 import kotlinx.coroutines.flow.Flow
@@ -187,6 +188,7 @@ class AppRepository(private val context: Context) {
     suspend fun deleteExpense(id: Long, requestId: String) {
         AppLogger.d(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=start, id=$id, type=expense")
         try {
+            expenseDao.getById(id)?.attachmentPath?.let { AttachmentStore.delete(context, it) }
             expenseDao.deleteById(id)
             AppLogger.i(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=success, result=success, id=$id, type=expense")
         } catch (e: Exception) {
@@ -199,6 +201,7 @@ class AppRepository(private val context: Context) {
     suspend fun deleteIncome(id: Long, requestId: String) {
         AppLogger.d(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=start, id=$id, type=income")
         try {
+            incomeDao.getById(id)?.attachmentPath?.let { AttachmentStore.delete(context, it) }
             incomeDao.deleteById(id)
             AppLogger.i(requestId, "删除执行", "requestId=$requestId, action=DELETE, stage=success, result=success, id=$id, type=income")
         } catch (e: Exception) {
@@ -259,6 +262,34 @@ class AppRepository(private val context: Context) {
             rowsAffected
         } catch (e: Exception) {
             AppLogger.e(requestId, "全字段更新执行", "requestId=$requestId, action=UPDATE_FULL, stage=error, result=failure, id=$id, type=income, category=$category, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    /** 更新支出凭证图片路径（null 表示移除附件）；被替换/移除的旧文件同步清理。 */
+    suspend fun updateExpenseAttachment(id: Long, path: String?, requestId: String) {
+        AppLogger.d(requestId, "附件更新", "requestId=$requestId, action=UPDATE_ATTACHMENT, stage=start, id=$id, type=expense")
+        try {
+            val old = expenseDao.getById(id)?.attachmentPath
+            expenseDao.updateAttachment(id, path)
+            if (old != null && old != path) AttachmentStore.delete(context, old)
+            AppLogger.i(requestId, "附件更新", "requestId=$requestId, action=UPDATE_ATTACHMENT, stage=success, result=success, id=$id, type=expense")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "附件更新", "requestId=$requestId, action=UPDATE_ATTACHMENT, stage=error, result=failure, id=$id, type=expense, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    /** 更新收入凭证图片路径（null 表示移除附件）；被替换/移除的旧文件同步清理。 */
+    suspend fun updateIncomeAttachment(id: Long, path: String?, requestId: String) {
+        AppLogger.d(requestId, "附件更新", "requestId=$requestId, action=UPDATE_ATTACHMENT, stage=start, id=$id, type=income")
+        try {
+            val old = incomeDao.getById(id)?.attachmentPath
+            incomeDao.updateAttachment(id, path)
+            if (old != null && old != path) AttachmentStore.delete(context, old)
+            AppLogger.i(requestId, "附件更新", "requestId=$requestId, action=UPDATE_ATTACHMENT, stage=success, result=success, id=$id, type=income")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "附件更新", "requestId=$requestId, action=UPDATE_ATTACHMENT, stage=error, result=failure, id=$id, type=income, error=${e.message}", e)
             throw e
         }
     }

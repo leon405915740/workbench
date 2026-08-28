@@ -9,8 +9,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +48,7 @@ import com.accounting.app.ui.model.AppTab
 import com.accounting.app.ui.screens.ChatScreen
 import com.accounting.app.ui.screens.DashboardScreen
 import com.accounting.app.ui.theme.AccountingTheme
+import com.accounting.app.ui.theme.CardWhite
 import com.accounting.app.ui.theme.NavActive
 import com.accounting.app.ui.theme.NavInactive
 import com.accounting.app.ui.theme.TextDelete
@@ -98,7 +102,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(viewModel: MainViewModel, showBottomNavigation: Boolean = true) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -111,12 +115,17 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
 
+    val imeVisible = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     Scaffold(
+        modifier = Modifier.imePadding(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
+            if (showBottomNavigation && !imeVisible) {
             BottomNavBar(
                 currentTab = uiState.currentTab,
                 onTabSelected = viewModel::switchTab
             )
+            }
         }
     ) { padding ->
         when (uiState.currentTab) {
@@ -194,7 +203,10 @@ private fun BottomNavBar(
         BottomNavItem(AppTab.DASHBOARD, "统计", Icons.Outlined.List)
     )
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = CardWhite,
+        tonalElevation = 0.dp
+    ) {
         items.forEach { item ->
             val isSelected = currentTab == item.tab
             NavigationBarItem(
