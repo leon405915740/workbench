@@ -11,6 +11,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.accounting.app.log.AppLogger
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.aigrowth.os.ui.common.WorkbenchCard
+import com.aigrowth.os.ui.common.WorkbenchPage
+import com.aigrowth.os.ui.common.WorkbenchTopBar
+import com.aigrowth.os.core.design.MorandiEmptyState
+import androidx.compose.material.icons.filled.Inbox
 
 @Composable
 fun MediaScreen(onOpenDrawer: () -> Unit) = SimpleListScreen("自媒体", "media", onOpenDrawer)
@@ -32,15 +41,12 @@ internal fun SimpleListScreen(title: String, kind: String, onOpenDrawer: () -> U
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text(title) },
-            navigationIcon = {
-                IconButton(onClick = onOpenDrawer) { Icon(Icons.Default.Menu, "打开导航") }
-            },
-        )
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(input, { input = it }, Modifier.weight(1f), label = { Text("新增事项") })
+    WorkbenchPage(Modifier.fillMaxSize()) {
+        WorkbenchTopBar(title, onOpenDrawer, if (kind == "media") "灵感与创作，逐项完成" else "每天积累一点语言输入")
+        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            WorkbenchCard(color = Color(0xFFE7F0F2)) { Text("今天也向前一步", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("把想做的事写下来，完成后轻轻勾选。", modifier = Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(input, { input = it }, Modifier.weight(1f), placeholder = { Text("输入一件要完成的事") }, shape = RoundedCornerShape(20.dp), singleLine = true)
             Button(onClick = {
                 if (input.isNotBlank()) {
                     val id = editing ?: store.newId()
@@ -48,15 +54,19 @@ internal fun SimpleListScreen(title: String, kind: String, onOpenDrawer: () -> U
                     input = ""
                     editing = null
                 }
-            }) { Text(if (editing == null) "添加" else "保存") }
+            }, shape = RoundedCornerShape(18.dp)) { Text(if (editing == null) "添加" else "保存") }
+            }
         }
-        LazyColumn(Modifier.fillMaxSize()) {
+        if (items.isEmpty()) MorandiEmptyState(Icons.Default.Inbox, "还没有事项", "在上方输入第一件小事吧", Modifier.fillMaxSize())
+        else LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(items, key = { it.id }) { item ->
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WorkbenchCard(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), color = if (item.done) Color(0xFFF0F4F1) else MaterialTheme.colorScheme.surface) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Checkbox(item.done, { saveItems(items.map { if (it.id == item.id) it.copy(done = !it.done) else it }) })
                     Text(item.text, Modifier.weight(1f).padding(top = 12.dp))
                     TextButton(onClick = { input = item.text; editing = item.id }) { Text("编辑") }
                     TextButton(onClick = { saveItems(items.filterNot { it.id == item.id }) }) { Text("删除") }
+                }
                 }
             }
         }

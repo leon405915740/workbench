@@ -32,21 +32,21 @@ import androidx.compose.ui.unit.dp
 // ===== 记账 App 设计体系（莫兰迪雾蓝紫）核心组件 =====
 
 object Morandi {
-    val BrandPrimary = Color(0xFF6366A0)
-    val BrandPrimaryLight = Color(0xFF7B7FBA)
-    val BrandPrimaryDark = Color(0xFF4A4E7C)
-    val BackgroundGray = Color(0xFFF5F6FA)
+    val BrandPrimary = Color(0xFF78B9A6)
+    val BrandPrimaryLight = Color(0xFFA7D4C5)
+    val BrandPrimaryDark = Color(0xFF397565)
+    val BackgroundGray = Color(0xFFF8F8F4)
     val CardWhite = Color(0xFFFFFFFF)
-    val TextPrimary = Color(0xFF33374C)
-    val TextSecondary = Color(0xFF878B9E)
+    val TextPrimary = Color(0xFF403F3A)
+    val TextSecondary = Color(0xFF777A74)
     val TextIncome = Color(0xFF3D8B6F)
     val TextDelete = Color(0xFFC25B5B)
     val TextWarning = Color(0xFFD4923F)
-    val NavInactive = Color(0xFF9CA0B0)
-    val DividerColor = Color(0xFFE2E1EA)
-    val BorderDefault = Color(0xFFDDDCE6)
-    val CardShadow = Color(0xFF6366A0)
-    val BubbleAi = Color(0xFFF2F1F7)
+    val NavInactive = Color(0xFF89918A)
+    val DividerColor = Color(0xFFE6E1D5)
+    val BorderDefault = Color(0xFFE2DDCF)
+    val CardShadow = Color(0xFF6C756F)
+    val BubbleAi = Color(0xFFF0F4F1)
 
     /** 品牌渐变（135°，供总览卡/按钮使用） */
     val BrandGradient: List<Color> = listOf(BrandPrimaryLight, BrandPrimary, BrandPrimaryDark)

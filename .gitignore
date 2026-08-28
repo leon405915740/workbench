@@ -36,3 +36,6 @@ build_log*.txt
 build_room261.log
 记账日志_*.txt
 .workbuddy/
+.codex/
+.trae/
+AGENTS.md

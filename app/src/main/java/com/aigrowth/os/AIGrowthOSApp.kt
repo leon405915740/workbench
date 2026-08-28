@@ -2,6 +2,9 @@ package com.aigrowth.os
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -9,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.*
@@ -20,6 +25,7 @@ import com.aigrowth.os.feature.settings.MemoryMappingViewModel
 import com.aigrowth.os.feature.settings.SettingsScreen
 import com.aigrowth.os.feature.simple.*
 import kotlinx.coroutines.launch
+import com.aigrowth.os.ui.common.WorkbenchTopBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,14 +60,7 @@ fun AIGrowthOSApp() {
     val activity = androidx.compose.ui.platform.LocalContext.current as? ComponentActivity ?: return
     val vm = remember { ViewModelProvider(activity, MainViewModel.factory(AccountingApp.getInstance().appRepository)).get(MainViewModel::class.java) }
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("记账") },
-            navigationIcon = {
-                IconButton(onClick = onOpenDrawer) {
-                    Icon(Icons.Default.Menu, "打开导航")
-                }
-            },
-        )
+        WorkbenchTopBar("记账", onOpenDrawer, "记录每一笔，让生活更有掌控感")
         Box(Modifier.weight(1f)) {
             MainScreen(vm)
         }
@@ -71,7 +70,22 @@ fun AIGrowthOSApp() {
 private data class NavItem(val route: String, val label: String, val icon: ImageVector)
 @Composable private fun SideNavigationDrawer(currentRoute: String?, onNavigate: (String) -> Unit) {
     val items = listOf(NavItem(Screen.CheckIn.route, "健身打卡", Icons.Default.FitnessCenter), NavItem(Screen.Media.route, "自媒体", Icons.Default.VideoLibrary), NavItem(Screen.English.route, "学英语", Icons.Default.Translate), NavItem(Screen.Record.route, "记账", Icons.Default.AccountBalanceWallet))
-    ModalDrawerSheet { Spacer(Modifier.height(24.dp)); Text("工作台", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp)); items.forEach { item -> NavigationDrawerItem(label = { Text(item.label) }, icon = { Icon(item.icon, item.label) }, selected = currentRoute == item.route, onClick = { onNavigate(item.route) }, modifier = Modifier.padding(horizontal = 8.dp)) }; Spacer(Modifier.weight(1f)); NavigationDrawerItem(label = { Text("设置") }, icon = { Icon(Icons.Default.Settings, "设置") }, selected = currentRoute == Screen.Settings.route, onClick = { onNavigate(Screen.Settings.route) }, modifier = Modifier.padding(horizontal = 8.dp)); Spacer(Modifier.height(12.dp)) }
+    ModalDrawerSheet(modifier = Modifier.width(132.dp), drawerContainerColor = Color(0xFFF0F5F1)) {
+        Column(Modifier.fillMaxHeight().padding(horizontal = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.padding(top = 20.dp, bottom = 24.dp).size(64.dp).background(Color(0xFFD6EAE2), RoundedCornerShape(32.dp)), contentAlignment = Alignment.Center) { Text("AI", style = MaterialTheme.typography.titleLarge, color = Color(0xFF397565)) }
+            items.forEach { item ->
+                val selected = currentRoute == item.route
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(if (selected) Color(0xFFDCEBE5) else Color.Transparent, RoundedCornerShape(18.dp)).clickable { onNavigate(item.route) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(item.icon, item.label, tint = if (selected) Color(0xFF397565) else Color(0xFF89918A), modifier = Modifier.size(25.dp))
+                    Text(item.label.substringBefore("打卡").take(3), style = MaterialTheme.typography.labelSmall, color = if (selected) Color(0xFF397565) else Color(0xFF687069))
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            val selected = currentRoute == Screen.Settings.route
+            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(if (selected) Color(0xFFDCEBE5) else Color.Transparent, RoundedCornerShape(18.dp)).clickable { onNavigate(Screen.Settings.route) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.Default.Settings, "设置", tint = Color(0xFF89918A)); Text("设置", style = MaterialTheme.typography.labelSmall, color = Color(0xFF687069)) }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
 }
 
 sealed class Screen(val route: String) { data object CheckIn : Screen("checkin"); data object Media : Screen("media"); data object English : Screen("english"); data object Record : Screen("record"); data object Settings : Screen("settings"); data object MemoryMapping : Screen("memory_mapping") }
