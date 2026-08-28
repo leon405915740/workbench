@@ -1,0 +1,24 @@
+- [x] GrowthViewModel 包含 TaskCategory 枚举定义（ALL/STUDY/CREATION/ENGLISH/FITNESS）
+- [x] GrowthViewModel 包含 selectedCategory、filteredRecords、selectedRecordId、selectedRecord 状态流
+- [x] filteredRecords 通过 combine(_records, _selectedCategory) 按 category 过滤实现
+- [x] selectedRecord 通过 combine(filteredRecords, _selectedRecordId) 查找，找不到时回退到 firstOrNull()
+- [x] GrowthViewModel 包含 selectRecord(id) 和 filterByCategory(category) 方法
+- [x] filterByCategory 调用时重置 selectedRecordId 为 null，触发自动选中第一条
+- [x] GrowthScreen 使用 Row 双栏布局（左侧140dp + 右侧weight(1f)）
+- [x] 左侧面板包含分类筛选标签栏（全部/学习/创作/英语/健身）
+- [x] 左侧列表项显示日期、学习时长、任务数、掌握度，选中态高亮+左侧竖条指示器
+- [x] 右侧详情面板显示选中记录的完整信息（日期、成长指标、AI总结、趋势图）
+- [x] 右侧底部包含三个快捷操作按钮（开始考核/查看卡片/AI复盘）
+- [x] "开始考核"按钮调用 onEvaluationClick(recordId)
+- [x] "查看卡片"按钮调用 onKnowledgeCardClick(recordId)
+- [x] "AI复盘"按钮触发 viewModel.generateGrowthReview()
+- [x] 进入成长模块时自动选中第一条记录（LaunchedEffect监听）
+- [x] 切换分类后原选中记录不在新分类时，自动选中第一条
+- [x] 空分类时 selectedRecord 为 null，右侧显示空状态占位
+- [x] 切换记录时右侧详情通过 AnimatedContent 平滑过渡（fadeIn/fadeOut）
+- [x] 左侧无记录时显示空状态引导（图标+文案+CTA按钮）
+- [x] 右侧未选中记录时显示占位提示
+- [x] 成长趋势图使用 Compose Canvas 绘制折线图，Y值=learningMinutes+tasksCompleted*10
+- [x] 趋势图无数据时显示"暂无趋势数据"文案
+- [x] AIGrowthOSApp.kt 中 GrowthScreen 导航回调已更新
+- [x] 编译通过无错误

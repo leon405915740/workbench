@@ -5,6 +5,7 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -13,5 +14,13 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "记账"
+rootProject.name = "AI-Growth-OS"
 include(":app")
+include(":core:database")
+include(":core:network")
+include(":core:ai-engine")
+include(":core:design")
+include(":feature:learning")
+include(":feature:growth")
+include(":feature:creator")
+include(":feature:accounting")

@@ -1,11 +1,15 @@
 *.iml
 .gradle
+.kotlin/
 /local.properties
 /.idea
 .DS_Store
 /build
 /app/build/
+build/
+out/
 /captures
+captures/
 .externalNativeBuild
 .cxx
 local.properties
@@ -14,6 +18,7 @@ local.properties
 *.aab
 *.dex
 *.class
+*.hprof
 *.bin
 *.zip
 *.gz
@@ -27,6 +32,7 @@ extract.py
 .superpowers/
 # 构建日志和运行日志
 *.log
+build_log*.txt
 build_room261.log
 记账日志_*.txt
 .workbuddy/
