@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">工作台</string>
+    <string name="title_goal">学习目标</string>
+    <string name="title_learning">学习路线</string>
+    <string name="title_daily">每日任务</string>
+    <string name="title_growth">成长数据</string>
+    <string name="title_creator">创作中心</string>
+    <string name="title_settings">设置</string>
+</resources>
