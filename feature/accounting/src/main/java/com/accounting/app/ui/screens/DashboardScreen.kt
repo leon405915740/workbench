@@ -155,7 +155,7 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.dashboardMessages, key = { it.timestamp }) { message ->
+                items(uiState.dashboardMessages) { message ->
                     when (message) {
                         is ChatMessage.UserMessage -> DashUserBubble(message)
                         is ChatMessage.AiTextMessage -> DashAiBubble(message)

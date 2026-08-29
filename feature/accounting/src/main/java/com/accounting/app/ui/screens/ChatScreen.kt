@@ -138,7 +138,7 @@ fun ChatScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(messages, key = { it.timestamp }) { message ->
+                    items(messages) { message ->
                         when (message) {
                             is ChatMessage.UserMessage -> UserBubble(message)
                             is ChatMessage.AiMessage -> AiBubble(message)
