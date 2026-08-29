@@ -23,7 +23,8 @@ object ClassificationService {
         // 先对完整描述做收支方向判定，mapping/memory/ai_hint/ai_correction/fallback
         // 各分支统一沿用该判定结果，修复此前各分支硬编码 type="expense" 导致
         // 「意外收入400」等收入输入被记成支出的问题。
-        val type = RuleMatcher.preJudgeType(request.description, requestId)
+        // 对完整描述做收支方向判定（log=false：完整「意图分流」全文解析已由 IntentRouter 唯一输出，此处仅复算类型不打全文）
+        val type = RuleMatcher.preJudgeType(request.description, requestId, log = false)
         val defaultCategory = getDefaultCategory(type)
 
         val mappingResult = MappingMatcher.match(type, request.description, requestId, billIndex ?: 1)

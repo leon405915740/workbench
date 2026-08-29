@@ -50,7 +50,6 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
     val focus by vm.focus.collectAsState()
     val statusEntries by vm.statusEntries.collectAsState()
     val monthExpense by vm.monthExpense.collectAsState()
-    val pomodoroUi by pomodoro.ui.collectAsState()
 
     val today = LocalDate.now()
     val week = remember {
@@ -58,6 +57,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
         (0 until 7).map { monday.plusDays(it.toLong()) }
     }
     var showStatusSheet by remember { mutableStateOf(false) }
+    val toggleCheck: (String, String) -> Unit = remember(vm) { vm::toggleCheck }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -79,18 +79,18 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                             week = week,
                             today = today.toString(),
                             checkedKeys = overview.habitChecked,
-                            onToggle = vm::toggleCheck
+                            onToggle = toggleCheck
                         )
                     }
                 }
                 item { TodayPlanCard(overview, onNavigate) }
                 item {
                     PomodoroCard(
-                        ui = pomodoroUi,
-                        onStartFocus = pomodoro::startFocus,
-                        onResume = pomodoro::resume,
-                        onPause = pomodoro::pause,
-                        onReset = pomodoro::reset
+                        uiFlow = pomodoro.ui,
+                        onStartFocus = remember(pomodoro) { pomodoro::startFocus },
+                        onResume = remember(pomodoro) { pomodoro::resume },
+                        onPause = remember(pomodoro) { pomodoro::pause },
+                        onReset = remember(pomodoro) { pomodoro::reset }
                     )
                 }
                 item { StatusTrendSection(statusEntries) { showStatusSheet = true } }

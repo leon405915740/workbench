@@ -13,8 +13,8 @@ android {
         applicationId = "com.aigrowth.os"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.5"
+        versionCode = 10
+        versionName = "1.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -55,7 +55,7 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
-            output.outputFileName = "工作台_v${variant.versionName}_${variant.buildType.name}.apk"
+            output.outputFileName = "工作台-${variant.versionName}.apk"
         }
     }
 }

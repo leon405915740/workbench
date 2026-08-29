@@ -121,7 +121,7 @@ fun ChatScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "AI 帮你自动记账",
+                            text = "帮你自动记账",
                             fontSize = 12.sp,
                             color = TextSecondary.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center

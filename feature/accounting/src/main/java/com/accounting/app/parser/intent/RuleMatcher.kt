@@ -23,18 +23,18 @@ object RuleMatcher {
         "理财", "收益", "利息", "收红包", "收份子钱", "收礼金"
     )
 
-    fun preJudgeType(rawInput: String, requestId: String): String {
+    fun preJudgeType(rawInput: String, requestId: String, log: Boolean = true): String {
         val hitIncome = incomeKeywords.firstOrNull { rawInput.contains(it) }
         if (hitIncome != null) {
-            AppLogger.d(requestId, "意图分流", "原始文本：${rawInput}，命中关键词：${hitIncome}，判定类型：income，判定依据：收入关键词")
+            if (log) AppLogger.d(requestId, "意图分流", "原始文本：${rawInput}，命中关键词：${hitIncome}，判定类型：income，判定依据：收入关键词")
             return "income"
         }
         val hitExpense = expenseKeywords.firstOrNull { rawInput.contains(it) }
         if (hitExpense != null) {
-            AppLogger.d(requestId, "意图分流", "原始文本：${rawInput}，命中关键词：${hitExpense}，判定类型：expense，判定依据：支出关键词")
+            if (log) AppLogger.d(requestId, "意图分流", "原始文本：${rawInput}，命中关键词：${hitExpense}，判定类型：expense，判定依据：支出关键词")
             return "expense"
         }
-        AppLogger.d(requestId, "意图分流", "原始文本：${rawInput}，未命中收支关键词，默认判定：expense")
+        if (log) AppLogger.d(requestId, "意图分流", "原始文本：${rawInput}，未命中收支关键词，默认判定：expense")
         return "expense"
     }
 

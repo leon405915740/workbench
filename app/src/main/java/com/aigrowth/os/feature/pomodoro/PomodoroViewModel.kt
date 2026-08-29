@@ -38,6 +38,7 @@ class PomodoroViewModel @Inject constructor(
 
     private val _tick = MutableStateFlow(0L)
     private val dbState = dao.observe(POMODORO_ID)
+    private var cached: PomodoroState? = null
 
     val ui: StateFlow<PomodoroUi> = combine(dbState, _tick) { db, now ->
         buildUi(db, now)
@@ -45,11 +46,15 @@ class PomodoroViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            cached = dao.get(POMODORO_ID)
+            _tick.value = System.currentTimeMillis()
             while (isActive) {
                 delay(1000)
                 val now = System.currentTimeMillis()
-                _tick.value = now
-                completeIfDue(now)
+                if (cached?.running == true) {
+                    _tick.value = now
+                    completeIfDue(now)
+                }
             }
         }
     }
@@ -75,7 +80,10 @@ class PomodoroViewModel @Inject constructor(
         viewModelScope.launch {
             val cur = dao.get(POMODORO_ID) ?: PomodoroState(POMODORO_ID, false, 0, FOCUS_SECONDS, null, 0, 0)
             val now = System.currentTimeMillis()
-            dao.upsert(cur.copy(running = true, remainSeconds = FOCUS_SECONDS, totalSeconds = FOCUS_SECONDS, startedAt = now))
+            val next = cur.copy(running = true, remainSeconds = FOCUS_SECONDS, totalSeconds = FOCUS_SECONDS, startedAt = now)
+            dao.upsert(next)
+            cached = next
+            _tick.value = now
             PomodoroAlarms.schedule(context, FOCUS_SECONDS, "专注完成，休息一下吧")
         }
     }
@@ -84,7 +92,9 @@ class PomodoroViewModel @Inject constructor(
         viewModelScope.launch {
             val cur = dao.get(POMODORO_ID) ?: return@launch
             val remain = remainAt(cur, System.currentTimeMillis())
-            dao.upsert(cur.copy(running = false, remainSeconds = remain, startedAt = null))
+            val next = cur.copy(running = false, remainSeconds = remain, startedAt = null)
+            dao.upsert(next)
+            cached = next
             PomodoroAlarms.cancel(context)
         }
     }
@@ -93,7 +103,10 @@ class PomodoroViewModel @Inject constructor(
         viewModelScope.launch {
             val cur = dao.get(POMODORO_ID) ?: return@launch
             val now = System.currentTimeMillis()
-            dao.upsert(cur.copy(running = true, startedAt = now))
+            val next = cur.copy(running = true, startedAt = now)
+            dao.upsert(next)
+            cached = next
+            _tick.value = now
             val message = if (phaseOf(cur.totalSeconds) == PomodoroPhase.BREAK) "休息结束，开始下一轮吧" else "专注完成，休息一下吧"
             PomodoroAlarms.schedule(context, cur.remainSeconds, message)
         }
@@ -102,13 +115,15 @@ class PomodoroViewModel @Inject constructor(
     fun reset() {
         viewModelScope.launch {
             val cur = dao.get(POMODORO_ID) ?: PomodoroState(POMODORO_ID, false, 0, FOCUS_SECONDS, null, 0, 0)
-            dao.upsert(cur.copy(running = false, remainSeconds = FOCUS_SECONDS, totalSeconds = FOCUS_SECONDS, startedAt = null))
+            val next = cur.copy(running = false, remainSeconds = FOCUS_SECONDS, totalSeconds = FOCUS_SECONDS, startedAt = null)
+            dao.upsert(next)
+            cached = next
             PomodoroAlarms.cancel(context)
         }
     }
 
     private suspend fun completeIfDue(now: Long) {
-        val db = dao.get(POMODORO_ID) ?: return
+        val db = cached ?: return
         if (!db.running) return
         val started = db.startedAt ?: return
         val elapsed = ((now - started) / 1000).toInt()
@@ -119,27 +134,27 @@ class PomodoroViewModel @Inject constructor(
     private suspend fun onComplete(db: PomodoroState, now: Long) {
         val isFocus = db.totalSeconds >= FOCUS_SECONDS
         if (isFocus) {
-            dao.upsert(
-                db.copy(
-                    running = true,
-                    totalSeconds = BREAK_SECONDS,
-                    remainSeconds = BREAK_SECONDS,
-                    startedAt = now,
-                    focusCount = db.focusCount + 1,
-                    totalFocusMinutes = db.totalFocusMinutes + FOCUS_SECONDS / 60
-                )
+            val next = db.copy(
+                running = true,
+                totalSeconds = BREAK_SECONDS,
+                remainSeconds = BREAK_SECONDS,
+                startedAt = now,
+                focusCount = db.focusCount + 1,
+                totalFocusMinutes = db.totalFocusMinutes + FOCUS_SECONDS / 60
             )
+            dao.upsert(next)
+            cached = next
             PomodoroAlarms.schedule(context, BREAK_SECONDS, "休息结束，开始下一轮吧")
             PomodoroAlarms.show(context, "专注完成", "休息 5 分钟吧")
         } else {
-            dao.upsert(
-                db.copy(
-                    running = false,
-                    totalSeconds = FOCUS_SECONDS,
-                    remainSeconds = FOCUS_SECONDS,
-                    startedAt = null
-                )
+            val next = db.copy(
+                running = false,
+                totalSeconds = FOCUS_SECONDS,
+                remainSeconds = FOCUS_SECONDS,
+                startedAt = null
             )
+            dao.upsert(next)
+            cached = next
             PomodoroAlarms.cancel(context)
             PomodoroAlarms.show(context, "休息结束", "开始下一轮专注吧")
         }

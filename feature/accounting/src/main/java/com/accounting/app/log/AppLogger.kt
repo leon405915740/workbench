@@ -10,6 +10,7 @@ import java.io.FileWriter
 import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -46,6 +47,15 @@ object AppLogger {
 
     /** 单条日志 message 主体最大长度（不含前缀），超过自动截断 */
     private const val MAX_MESSAGE_LENGTH = 2000
+
+    /**
+     * 重复日志抑制固定时间窗（毫秒）。
+     * 以第一条匹配指纹的日志调用时刻为窗口起点，窗口不随每条日志滑动续期。
+     */
+    private const val WINDOW_MS = 500L
+
+    /** 重复日志抑制指纹 LRU 缓存上限（条），超限按访问顺序淘汰最久未命中的指纹 */
+    private const val FINGERPRINT_CACHE_SIZE = 256
 
     /** 日志文件目录名 */
     private const val LOG_DIR_NAME = "logs"
@@ -87,7 +97,14 @@ object AppLogger {
      * 注意：ERROR 与 CRASH 级别不受此开关影响，始终写入文件。
      */
     fun setDebugLogEnabled(enabled: Boolean) {
+        val wasEnabled = debugLogEnabled
         debugLogEnabled = enabled
+        // debugLogEnabled 关闭→重新开启时清空指纹抑制缓存，重建
+        if (enabled && !wasEnabled) {
+            synchronized(throttleLock) {
+                fingerprintCache.clear()
+            }
+        }
         if (::appContext.isInitialized) {
             appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
@@ -201,7 +218,8 @@ object AppLogger {
         val keywordStr = keyword ?: "null"
         val sourceStr = source ?: "null"
         val message = "keyword:$keywordStr, reason:$reason, confidence:$confidenceStr, source:$sourceStr"
-        log(LogLevel.INFO, requestId, "决策日志[$node]", null, message, billIndex)
+        // 决策日志不参与重复抑制（bypassThrottle=true），node 直接用原值
+        log(LogLevel.INFO, requestId, node, null, message, billIndex, bypassThrottle = true)
     }
 
     /**
@@ -279,13 +297,29 @@ object AppLogger {
     /** 日志级别枚举 */
     private enum class LogLevel { DEBUG, INFO, WARN, ERROR }
 
+    /** 重复日志抑制的窗口计数条目 */
+    private data class ThrottleEntry(var windowStart: Long, var count: Int)
+
+    /** 指纹抑制计数同步锁（调用线程同步，仅最终文件写入投递到 logExecutor） */
+    private val throttleLock = Any()
+
+    /** 指纹 → 窗口计数 LRU 缓存，accessOrder=true，超限淘汰最久未命中的指纹 */
+    private val fingerprintCache = object :
+        LinkedHashMap<String, ThrottleEntry>(FINGERPRINT_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ThrottleEntry>?): Boolean {
+            return size > FINGERPRINT_CACHE_SIZE
+        }
+    }
+
     /**
      * 统一日志输出入口。
      *
-     * 流程：组装前缀 → message 主体截断 → 调用 Logcat → 调用 [saveLogToFile]（占位）
+     * 流程：组装前缀 → message 主体截断 → 调用 Logcat → 重复抑制判断 → 调用 [saveLogToFile]
      *
      * 前缀格式：`[requestId] [node] [第N笔]`（多笔场景含笔序号）
      * 注意：前缀不计入 2000 字符长度限制，始终完整保留
+     *
+     * @param bypassThrottle 为 true 时不做重复抑制（决策日志 decision 使用），Logcat 与文件均原样输出
      */
     private fun log(
         level: LogLevel,
@@ -294,7 +328,8 @@ object AppLogger {
         throwable: Throwable?,
         rawMessage: String,
         billIndex: Int? = null,
-        extraThrowable: Throwable? = null
+        extraThrowable: Throwable? = null,
+        bypassThrottle: Boolean = false
     ) {
         // ERROR 级别始终写入（即使 Release 包关闭了详细日志），保证崩溃/关键错误可排查
         val alwaysWrite = level == LogLevel.ERROR
@@ -314,7 +349,7 @@ object AppLogger {
         // 拼接最终日志文本
         val finalMessage = "$prefix $truncatedMessage"
 
-        // 输出到 Logcat
+        // 输出到 Logcat（Logcat 始终原样输出，不受重复抑制影响）
         when (level) {
             LogLevel.DEBUG -> Log.d(TAG, finalMessage)
             LogLevel.INFO -> Log.i(TAG, finalMessage)
@@ -323,7 +358,71 @@ object AppLogger {
         }
 
         // 异步写入本地日志文件（ERROR 级及以上始终落盘）
-        saveLogToFile(level.name, TAG, finalMessage, finalThrowable)
+        // ERROR/CRASH 与决策日志（decision）豁免重复抑制，直接原样写入
+        if (alwaysWrite || bypassThrottle) {
+            saveLogToFile(level.name, TAG, finalMessage, finalThrowable)
+        } else {
+            writeWithThrottle(requestId, node, truncatedMessage, finalMessage, finalThrowable, level)
+        }
+    }
+
+    /**
+     * 重复日志抑制写入：仅作用于【文件写入】。
+     *
+     * 以第一条匹配指纹的日志时刻为窗口起点（WINDOW_MS），窗口内同指纹后续日志不写文件、累计计数；
+     * 超窗后的下一条到来时先写一行摘要 `原message [xN次]`，再以本条为新窗口首条写原文，计数重置 0。
+     * 指纹计算与窗口计数在调用线程同步执行（synchronized），仅最终文件写入投递到 logExecutor。
+     */
+    private fun writeWithThrottle(
+        requestId: String,
+        node: String,
+        messageBody: String,
+        finalMessage: String,
+        finalThrowable: Throwable?,
+        level: LogLevel
+    ) {
+        val fingerprint = buildFingerprint(requestId, node, messageBody)
+        val now = System.currentTimeMillis()
+
+        var summary: String? = null
+        var writeOriginal = true
+
+        synchronized(throttleLock) {
+            val entry = fingerprintCache[fingerprint]
+            if (entry == null) {
+                // 新指纹：作为窗口首条，写原文
+                fingerprintCache[fingerprint] = ThrottleEntry(now, 0)
+            } else if (now - entry.windowStart < WINDOW_MS) {
+                // 窗口内重复：累计计数，不写文件
+                entry.count = entry.count + 1
+                writeOriginal = false
+            } else {
+                // 已超窗：先写摘要（总量-1 次），再以本条为新窗口首条写原文，计数重置 0
+                summary = "$finalMessage [x${entry.count}次]"
+                entry.windowStart = now
+                entry.count = 0
+            }
+        }
+
+        val summaryOut = summary
+        if (summaryOut != null) {
+            saveLogToFile(level.name, TAG, summaryOut, finalThrowable)
+        }
+        if (writeOriginal) {
+            saveLogToFile(level.name, TAG, finalMessage, finalThrowable)
+        }
+    }
+
+    /**
+     * 构建重复抑制指纹：`requestId + "|" + node + "|" + 截断/脱敏后的 message 主体`。
+     * requestId 为空时退化为 `node + message`。
+     */
+    private fun buildFingerprint(requestId: String, node: String, message: String): String {
+        return if (requestId.isBlank()) {
+            "$node|$message"
+        } else {
+            "$requestId|$node|$message"
+        }
     }
 
     /** 组装日志前缀：`[requestId] [node]` 或 `[requestId] [node] [第N笔]` */

@@ -56,10 +56,13 @@ class HomeViewModel @Inject constructor(
 
     private val bridge: AccountingBridge = AccountingApp.getBridge()
     private val today = todayString()
+    private val weekToday = LocalDate.parse(today)
+    private val weekStart = weekToday.minusDays((weekToday.dayOfWeek.value - 1).toLong()).toString()
+    private val weekEnd = weekToday.plusDays((7 - weekToday.dayOfWeek.value).toLong()).toString()
 
     private val plans = planDao.getAll()
     private val habits = habitDao.getAll()
-    private val logs = habitLogDao.getLogsInRange("0000-01-01", "9999-12-31")
+    private val logs = habitLogDao.getLogsInRange(weekStart, weekEnd)
     private val reading = readingDao.getAll()
     private val exercise = exerciseDao.getAll()
     private val essays = essayDao.getAll()

@@ -85,27 +85,36 @@ object AmountUtils {
      */
     fun extractAmounts(rawInput: String, requestId: String): List<AmountSegment> {
         AppLogger.d(requestId, "金额提取", "开始提取金额")
+        val results = extractAmountsSilent(rawInput)
+        // 埋点：金额提取结果汇总
+        val amountsDesc = results.joinToString(", ") { "value=${it.amountFen}分" }
+        val segmentsDesc = results.joinToString(", ") { "\"${it.textBefore}${it.amountFen}分\"" }
+        AppLogger.d(
+            requestId,
+            "金额提取",
+            "原始文本：$rawInput，提取金额：[$amountsDesc]，拆分片段：[$segmentsDesc]，共${results.size}笔"
+        )
+        return results
+    }
+
+    /**
+     * 静默金额计数：复用 [extractAmounts] 的匹配逻辑但不打任何日志。
+     *
+     * 仅用于需要金额段数（上限）检查、却不想触发「金额提取」完整解析埋点的场景
+     * （如记账入口的段数上限检查），避免同一输入被重复完整解析。
+     */
+    fun countAmounts(rawInput: String): Int = extractAmountsSilent(rawInput).size
+
+    /** 金额拆分核心逻辑（不打日志）。提取成功返回数量等价的片段列表，供日志埋点与静默计数复用。 */
+    private fun extractAmountsSilent(rawInput: String): List<AmountSegment> {
         val results = mutableListOf<AmountSegment>()
         var remaining = rawInput
-
-        try {
-            while (remaining.isNotEmpty()) {
-                val match = extractAmountWithPos(remaining) ?: break
-                val (amountFen, startIndex, endIndex) = match
-                val textBefore = remaining.substring(0, startIndex).trim()
-                results.add(AmountSegment(amountFen, textBefore))
-                remaining = remaining.substring(endIndex).trimStart()
-            }
-            // 埋点：金额提取结果汇总
-            val amountsDesc = results.joinToString(", ") { "value=${it.amountFen}分" }
-            val segmentsDesc = results.joinToString(", ") { "\"${it.textBefore}${it.amountFen}分\"" }
-            AppLogger.d(
-                requestId,
-                "金额提取",
-                "原始文本：$rawInput，提取金额：[$amountsDesc]，拆分片段：[$segmentsDesc]，共${results.size}笔"
-            )
-        } catch (e: Exception) {
-            AppLogger.e(requestId, "金额提取", "金额拆分异常：${e.message}", e)
+        while (remaining.isNotEmpty()) {
+            val match = extractAmountWithPos(remaining) ?: break
+            val (amountFen, startIndex, endIndex) = match
+            val textBefore = remaining.substring(0, startIndex).trim()
+            results.add(AmountSegment(amountFen, textBefore))
+            remaining = remaining.substring(endIndex).trimStart()
         }
         return results
     }

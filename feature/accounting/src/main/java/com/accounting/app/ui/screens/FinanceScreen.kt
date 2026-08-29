@@ -121,9 +121,15 @@ fun FinanceScreen(
                     FinanceToolbar(
                         uiState = uiState,
                         onSearchChange = viewModel::updateFinanceSearch,
-                        onManualEntry = { viewModel.openManualEntry() },
+                        onSendQuery = {
+                            viewModel.updateDashboardInput(uiState.financeSearchQuery)
+                            viewModel.sendDashboardQuery()
+                        },
                         onAiEntry = { showAiSheet = true }
                     )
+                }
+                if (uiState.dashboardMessages.isNotEmpty() || uiState.dashboardIsLoading) {
+                    item(key = "qa-inline") { FinanceQAResultInline(uiState) }
                 }
                 item(key = "list-title") {
                     Text(
@@ -146,13 +152,6 @@ fun FinanceScreen(
                     FinanceStatsSection(
                         uiState = uiState,
                         onSwitchDashTab = viewModel::switchDashTab
-                    )
-                }
-                item(key = "qa") {
-                    FinanceQASection(
-                        uiState = uiState,
-                        onInputChange = viewModel::updateDashboardInput,
-                        onSend = viewModel::sendDashboardQuery
                     )
                 }
             }
@@ -282,9 +281,11 @@ private fun OverviewMini(label: String, value: String, valueColor: Color) {
 private fun FinanceToolbar(
     uiState: UiState,
     onSearchChange: (String) -> Unit,
-    onManualEntry: () -> Unit,
+    onSendQuery: () -> Unit,
     onAiEntry: () -> Unit
 ) {
+    val query = uiState.financeSearchQuery
+    val sendEnabled = query.isNotBlank() && !uiState.dashboardIsLoading
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -294,7 +295,7 @@ private fun FinanceToolbar(
             .padding(12.dp)
     ) {
         OutlinedTextField(
-            value = uiState.financeSearchQuery,
+            value = query,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("搜索商户、分类、备注…", fontSize = 14.sp, color = TextSecondary) },
@@ -302,7 +303,18 @@ private fun FinanceToolbar(
             leadingIcon = {
                 Icon(Icons.Filled.Search, contentDescription = "搜索", tint = TextSecondary, modifier = Modifier.size(20.dp))
             },
+            trailingIcon = {
+                IconButton(onClick = onSendQuery, enabled = sendEnabled) {
+                    Icon(
+                        Icons.Filled.Send,
+                        contentDescription = "发送问题",
+                        tint = if (sendEnabled) WeChatGreen else TextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            },
             shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = BackgroundGray,
                 unfocusedContainerColor = BackgroundGray,
@@ -311,24 +323,13 @@ private fun FinanceToolbar(
             )
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(
-                onClick = onManualEntry,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("新建", color = TextPrimary, fontSize = 14.sp)
-            }
-            Button(
-                onClick = onAiEntry,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WeChatGreen)
-            ) {
-                Text("AI 记账", color = CardWhite, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            }
+        Button(
+            onClick = onAiEntry,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = WeChatGreen)
+        ) {
+            Text("记一笔", color = CardWhite, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -394,7 +395,7 @@ private fun EmptyState(isSearch: Boolean) {
             Text(text = "📊", fontSize = 40.sp)
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = if (isSearch) "没有匹配的记录" else "暂无记录，点「AI 记账」或「新建」添加第一笔",
+                text = if (isSearch) "没有匹配的记录" else "暂无记录，点「记一笔」添加第一笔",
                 fontSize = 14.sp,
                 color = TextPrimary
             )
@@ -658,109 +659,56 @@ private fun DetailRow(label: String, value: String, valueColor: Color) {
     }
 }
 
-// ===================== 统计问答 =====================
+// ===================== 问答结果内联区 =====================
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FinanceQASection(
-    uiState: UiState,
-    onInputChange: (String) -> Unit,
-    onSend: () -> Unit
-) {
+private fun FinanceQAResultInline(uiState: UiState) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp), clip = false)
             .clip(RoundedCornerShape(12.dp))
             .background(CardWhite)
-            .padding(16.dp)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = "统计问答",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "问我：这个月餐饮花了多少、本月收支对比…", fontSize = 12.sp, color = TextSecondary)
-        Spacer(modifier = Modifier.height(10.dp))
-
-        if (uiState.dashboardMessages.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                uiState.dashboardMessages.takeLast(6).forEach { message ->
-                    when (message) {
-                        is ChatMessage.UserMessage -> {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                Box(
-                                    modifier = Modifier
-                                        .widthIn(max = 260.dp)
-                                        .clip(RoundedCornerShape(14.dp, 4.dp, 14.dp, 14.dp))
-                                        .background(WeChatGreen)
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
-                                    Text(message.text, fontSize = 13.sp, color = Color.White)
-                                }
-                            }
+        uiState.dashboardMessages.takeLast(6).forEach { message ->
+            when (message) {
+                is ChatMessage.UserMessage -> {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        Box(
+                            modifier = Modifier
+                                .widthIn(max = 260.dp)
+                                .clip(RoundedCornerShape(14.dp, 4.dp, 14.dp, 14.dp))
+                                .background(WeChatGreen)
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(message.text, fontSize = 13.sp, color = Color.White)
                         }
-                        is ChatMessage.AiTextMessage -> {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                                Box(
-                                    modifier = Modifier
-                                        .widthIn(max = 280.dp)
-                                        .clip(RoundedCornerShape(4.dp, 14.dp, 14.dp, 14.dp))
-                                        .background(BackgroundGray)
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
-                                    Text(message.content, fontSize = 13.sp, color = TextPrimary)
-                                }
-                            }
-                        }
-                        else -> {}
                     }
                 }
+                is ChatMessage.AiTextMessage -> {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                        Box(
+                            modifier = Modifier
+                                .widthIn(max = 280.dp)
+                                .clip(RoundedCornerShape(4.dp, 14.dp, 14.dp, 14.dp))
+                                .background(BackgroundGray)
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(message.content, fontSize = 13.sp, color = TextPrimary)
+                        }
+                    }
+                }
+                else -> {}
             }
-            Spacer(modifier = Modifier.height(10.dp))
         }
-
         if (uiState.dashboardIsLoading) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
                 color = WeChatGreen,
                 trackColor = DividerColor
             )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = uiState.dashboardInputText,
-                onValueChange = onInputChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("输入查询问题", fontSize = 13.sp, color = TextSecondary) },
-                singleLine = true,
-                enabled = !uiState.dashboardIsLoading,
-                shape = RoundedCornerShape(20.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = BackgroundGray,
-                    unfocusedContainerColor = BackgroundGray,
-                    disabledContainerColor = BackgroundGray,
-                    focusedIndicatorColor = WeChatGreen,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                )
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            IconButton(
-                onClick = onSend,
-                enabled = uiState.dashboardInputText.isNotBlank() && !uiState.dashboardIsLoading
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Send,
-                    contentDescription = "发送",
-                    tint = if (uiState.dashboardInputText.isNotBlank() && !uiState.dashboardIsLoading) WeChatGreen else TextSecondary
-                )
-            }
         }
     }
 }
@@ -786,14 +734,14 @@ private fun AiEntrySheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "AI 记账",
+                text = "记一笔",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "输入一句话，AI 自动识别金额与分类，例如：午饭 25 元麦当劳",
+                text = "输入一句话，自动识别金额与分类，例如：午饭 25 元麦当劳",
                 fontSize = 13.sp,
                 color = TextSecondary
             )
@@ -804,6 +752,29 @@ private fun AiEntrySheet(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("例如：午饭 25 元", fontSize = 14.sp, color = TextSecondary) },
                 singleLine = true,
+                leadingIcon = {
+                    IconButton(
+                        onClick = {
+                            onDismiss()
+                            onManualEntry()
+                        }
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "手动填写", tint = WeChatGreen, modifier = Modifier.size(20.dp))
+                    }
+                },
+                trailingIcon = {
+                    IconButton(
+                        onClick = { onAiSend(text) },
+                        enabled = text.isNotBlank()
+                    ) {
+                        Icon(
+                            Icons.Filled.Send,
+                            contentDescription = "发送",
+                            tint = if (text.isNotBlank()) WeChatGreen else TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                },
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 colors = TextFieldDefaults.colors(
@@ -814,27 +785,6 @@ private fun AiEntrySheet(
                 )
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
-                    onClick = onManualEntry,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("手动填写", color = TextPrimary, fontSize = 14.sp)
-                }
-                Button(
-                    onClick = { onAiSend(text) },
-                    enabled = text.isNotBlank(),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = WeChatGreen,
-                        disabledContainerColor = WeChatGreen.copy(alpha = 0.4f)
-                    )
-                ) {
-                    Text("AI 记账", color = CardWhite, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
-            }
         }
     }
 }

@@ -56,7 +56,6 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        AppLogger.d("", "MainViewModel", "ViewModel 已清除")
     }
 
     /** 加载已保存的 API Key 到 UI 状态 */
@@ -153,7 +152,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
             if (hasAmount) {
                 // 含金额 → 记账流程（支持多笔拆分）
                 // 检查金额数量上限
-                val segmentCount = AmountUtils.extractAmounts(rawInput, requestId).size
+                val segmentCount = AmountUtils.countAmounts(rawInput)
                 if (segmentCount > 10) {
                     _uiState.update {
                         it.copy(

@@ -3,21 +3,25 @@ package com.aigrowth.os.feature.pomodoro
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aigrowth.os.ui.common.WorkbenchCard
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun PomodoroCard(
-    ui: PomodoroUi,
+    uiFlow: StateFlow<PomodoroUi>,
     onStartFocus: () -> Unit,
     onResume: () -> Unit,
     onPause: () -> Unit,
     onReset: () -> Unit
 ) {
+    val ui by uiFlow.collectAsState()
     val phaseLabel = when (ui.phase) {
         PomodoroPhase.BREAK -> "休息"
         else -> "专注"

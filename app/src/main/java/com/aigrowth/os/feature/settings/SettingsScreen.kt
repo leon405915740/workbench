@@ -37,6 +37,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
 
     var notifGranted by remember { mutableStateOf(false) }
+    var overlayGranted by remember { mutableStateOf(false) }
     var pendingCsvRequestId by remember { mutableStateOf<String?>(null) }
     var pendingLogRequestId by remember { mutableStateOf<String?>(null) }
     val autoLearn by bridge.isAutoLearnEnabled().collectAsState(initial = true)
@@ -44,6 +45,7 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         notifGranted = isNotificationAccessEnabled(context)
+        overlayGranted = Settings.canDrawOverlays(context)
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -51,6 +53,7 @@ fun SettingsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 notifGranted = isNotificationAccessEnabled(context)
+                overlayGranted = Settings.canDrawOverlays(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -200,7 +203,7 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "微信/支付宝/云闪付付款成功后，自动唤起记账卡片（需开启通知监听）",
+                            text = "微信/支付宝/云闪付付款成功后，自动唤起记账卡片（需开启通知监听与悬浮窗权限）",
                             style = MaterialTheme.typography.bodySmall,
                             color = Morandi.TextSecondary
                         )
@@ -231,6 +234,49 @@ fun SettingsScreen(
                                 color = Morandi.TextPrimary
                             )
                             if (notifGranted) {
+                                Text(
+                                    text = "已开启",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Morandi.TextIncome
+                                )
+                            } else {
+                                Text(
+                                    text = "去开启 →",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Morandi.BrandPrimary
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val requestId = AppLogger.generateRequestId()
+                                    AppLogger.i(requestId, "SettingsScreen", "openOverlaySettings 入口")
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(
+                                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                                android.net.Uri.parse("package:${context.packageName}")
+                                            )
+                                        )
+                                    }.onSuccess {
+                                        AppLogger.d(requestId, "SettingsScreen", "openOverlaySettings 成功")
+                                    }.onFailure {
+                                        AppLogger.e(requestId, "SettingsScreen", "openOverlaySettings 失败", it)
+                                    }
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "悬浮窗权限",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Morandi.TextPrimary
+                            )
+                            if (overlayGranted) {
                                 Text(
                                     text = "已开启",
                                     style = MaterialTheme.typography.bodyMedium,

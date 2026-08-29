@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
@@ -138,14 +139,23 @@ private fun SideNavigationBar(currentRoute: String?, width: androidx.compose.ui.
                 .padding(horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val settingsSelected = currentRoute == Screen.Settings.route ||
+                currentRoute == Screen.MemoryMapping.route
             Box(
                 modifier = Modifier
                     .padding(top = 20.dp, bottom = 24.dp)
                     .size(width - 12.dp)
-                    .background(Color(0xFFD6EAE2), RoundedCornerShape(32.dp)),
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(if (settingsSelected) Color(0xFFDCEBE5) else Color(0xFFD6EAE2))
+                    .clickable { onNavigate(Screen.Settings.route) },
                 contentAlignment = Alignment.Center
             ) {
-                Text("🌱", style = MaterialTheme.typography.headlineSmall)
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = "设置",
+                    tint = if (settingsSelected) selectedColor else inactiveColor,
+                    modifier = Modifier.size(28.dp)
+                )
             }
 
             items.forEach { item ->
@@ -161,15 +171,6 @@ private fun SideNavigationBar(currentRoute: String?, width: androidx.compose.ui.
             }
 
             Spacer(Modifier.weight(1f))
-            DrawerItem(
-                label = "设置",
-                icon = Icons.Default.Settings,
-                selected = currentRoute == Screen.Settings.route ||
-                    currentRoute == Screen.MemoryMapping.route,
-                selectedColor = selectedColor,
-                inactiveColor = inactiveColor,
-                onClick = { onNavigate(Screen.Settings.route) }
-            )
             Spacer(Modifier.height(12.dp))
         }
     }

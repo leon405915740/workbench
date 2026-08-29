@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Android 10+ 后台 startActivity 限制：付款后从通知监听服务唤起记账卡片需悬浮窗权限豁免 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <application>
         <activity
             android:name="com.accounting.app.MainActivity"
