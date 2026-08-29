@@ -6,6 +6,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import com.accounting.app.ai.service.DeepSeekApi as PlannerDeepSeekApi
+import com.accounting.app.data.local.pref.AiProviders
 
 /**
  * Retrofit 客户端单例工厂。
@@ -18,16 +19,23 @@ import com.accounting.app.ai.service.DeepSeekApi as PlannerDeepSeekApi
  * - 超时配置：连接 30s，读取 60s，适配大模型较长响应时间
  */
 object RetrofitClient {
-    private const val BASE_URL = "https://api.deepseek.com/"
+    private const val DEEPSEEK_URL = "https://api.deepseek.com/"
+    private const val OPENCODE_GO_URL = "https://opencode.ai/zen/go/"
+
+    /**
+     * 按 AI 提供商返回 base url：deepseek / opencode_go。
+     */
+    fun baseUrlFor(provider: String): String =
+        if (provider == AiProviders.OPENCODE_GO) OPENCODE_GO_URL else DEEPSEEK_URL
 
     /**
      * 创建 DeepSeekApi 实例。
      * 每次调用都会构造新的 Retrofit 实例，
      * 在调用频次不高的记账场景下性能可接受。
      */
-    fun create(): DeepSeekApi {
+    fun create(provider: String = AiProviders.DEEPSEEK): DeepSeekApi {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrlFor(provider))
             .client(
                 OkHttpClient.Builder()
                     .addInterceptor(
@@ -44,9 +52,9 @@ object RetrofitClient {
             .create(DeepSeekApi::class.java)
     }
 
-    fun createPlannerApi(): PlannerDeepSeekApi {
+    fun createPlannerApi(provider: String = AiProviders.DEEPSEEK): PlannerDeepSeekApi {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrlFor(provider))
             .client(
                 OkHttpClient.Builder()
                     .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })

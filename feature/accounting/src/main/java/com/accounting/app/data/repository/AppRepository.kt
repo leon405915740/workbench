@@ -9,11 +9,7 @@ import com.accounting.app.data.local.database.SeedData
 import com.accounting.app.data.local.entity.ExpenseEntity
 import com.accounting.app.data.local.entity.IncomeEntity
 import com.accounting.app.data.local.pref.UserPreferences
-import com.accounting.app.data.remote.DeepSeekApi
-import com.accounting.app.data.remote.DeepSeekModels
 import com.accounting.app.data.remote.RetrofitClient
-import com.accounting.app.data.remote.model.ChatMessage
-import com.accounting.app.data.remote.model.ChatRequest
 import com.accounting.app.data.model.BillExecutePlan
 import com.accounting.app.parser.category.AiClassifier
 import com.accounting.app.parser.category.ClassificationService
@@ -85,7 +81,7 @@ sealed class ParseResult {
  *
  * 设计说明：
  * - 持有 Context 是为了初始化数据库与 DataStore，实际使用 applicationContext
- * - DeepSeekApi 在构造时即创建，避免每次请求重建 Retrofit
+ * - planner API 实例按 provider 缓存，避免每次请求重建 Retrofit
  * - 计划生成逻辑委托给 PlanBuilder，Repository 仅负责持久化
  */
 class AppRepository(private val context: Context) {
@@ -96,10 +92,28 @@ class AppRepository(private val context: Context) {
     private val categoryMemoryDao = database.categoryMemoryDao()
     private val categoryMappingDao = database.categoryMappingDao()
     private val userPrefs = UserPreferences(context)
-    private val deepSeekApi: DeepSeekApi = RetrofitClient.create()
 
-    private val aiPlanner = AiPlanner(RetrofitClient.createPlannerApi()) { getApiKey() }
-    private val accountingAiParser = AccountingAiParser(RetrofitClient.createPlannerApi()) { getApiKey() }
+    /** planner API 实例缓存：provider -> 实例 */
+    private val plannerApiCache = mutableMapOf<String, com.accounting.app.ai.service.DeepSeekApi>()
+
+    /** 按 provider 获取（缓存）planner API 实例 */
+    private fun plannerApiFor(provider: String): com.accounting.app.ai.service.DeepSeekApi =
+        synchronized(plannerApiCache) {
+            plannerApiCache.getOrPut(provider) {
+                RetrofitClient.createPlannerApi(provider)
+            }
+        }
+
+    private val aiPlanner = AiPlanner(
+        apiProvider = { plannerApiFor(getProvider()) },
+        apiKeyProvider = { getApiKey() },
+        modelProvider = { getModel() }
+    )
+    private val accountingAiParser = AccountingAiParser(
+        apiProvider = { plannerApiFor(getProvider()) },
+        apiKeyProvider = { getApiKey() },
+        modelProvider = { getModel() }
+    )
     private val planBuilder = PlanBuilder(aiPlanner)
     private val planExecutor = PlanExecutor(
         database,
@@ -110,7 +124,11 @@ class AppRepository(private val context: Context) {
     init {
         MappingMatcher.init(this)
         ClassificationService.init(this)
-        ClassificationService.aiClassifier = AiClassifier { getApiKey() }
+        ClassificationService.aiClassifier = AiClassifier(
+            apiProvider = { plannerApiFor(getProvider()) },
+            apiKeyProvider = { getApiKey() },
+            modelProvider = { getModel() }
+        )
     }
 
     // 暴露 userPrefs 给 ViewModel 用于聊天记录持久化
@@ -478,23 +496,154 @@ class AppRepository(private val context: Context) {
     // ===================== API Key 管理 =====================
 
     /**
-     * 读取 API Key：返回用户在设置页配置的值。
+     * 读取当前 AI 提供商（deepseek / opencode_go）对应的 API Key。
      * 若用户未配置，返回空字符串，由调用方自行处理。
      */
     suspend fun getApiKey(): String {
-        return userPrefs.getApiKey().first()
+        return userPrefs.getActiveApiKey().first()
     }
 
-    /** 写入用户配置的 API Key 到 DataStore */
+    /** 写入用户配置的 API Key 到 DataStore（DeepSeek） */
     suspend fun setApiKey(key: String, requestId: String) {
         val maskedKey = if (key.isEmpty()) "<empty>" else AppLogger.maskApiKey(key)
-        AppLogger.d(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=start, apiKey=$maskedKey")
+        AppLogger.d(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=start, provider=deepseek, apiKey=$maskedKey")
         try {
             userPrefs.setApiKey(key)
-            AppLogger.i(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=success, result=success, apiKey=$maskedKey")
+            AppLogger.i(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=success, result=success, provider=deepseek, apiKey=$maskedKey")
         } catch (e: Exception) {
-            AppLogger.e(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=error, result=failure, apiKey=$maskedKey, error=${e.message}", e)
+            AppLogger.e(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=error, result=failure, provider=deepseek, apiKey=$maskedKey, error=${e.message}", e)
             throw e
+        }
+    }
+
+    /** 写入 OpenCode Go 的 API Key 到 DataStore */
+    suspend fun setOpenCodeApiKey(key: String, requestId: String) {
+        val maskedKey = if (key.isEmpty()) "<empty>" else AppLogger.maskApiKey(key)
+        AppLogger.d(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=start, provider=opencode_go, apiKey=$maskedKey")
+        try {
+            userPrefs.setOpenCodeApiKey(key)
+            AppLogger.i(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=success, result=success, provider=opencode_go, apiKey=$maskedKey")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "API Key 保存", "requestId=$requestId, action=SET_API_KEY, stage=error, result=failure, provider=opencode_go, apiKey=$maskedKey, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    /** 当前 AI 提供商 */
+    suspend fun getProvider(): String = userPrefs.getProvider().first()
+
+    /** 切换 AI 提供商 */
+    suspend fun setProvider(provider: String, requestId: String) {
+        AppLogger.d(requestId, "API Provider", "requestId=$requestId, action=SET_PROVIDER, stage=start, provider=$provider")
+        try {
+            userPrefs.setProvider(provider)
+            AppLogger.i(requestId, "API Provider", "requestId=$requestId, action=SET_PROVIDER, stage=success, result=success, provider=$provider")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "API Provider", "requestId=$requestId, action=SET_PROVIDER, stage=error, result=failure, provider=$provider, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    /** 当前模型名 */
+    suspend fun getModel(): String = userPrefs.getModel().first()
+
+    /** 保存模型名 */
+    suspend fun setModel(model: String, requestId: String) {
+        AppLogger.d(requestId, "API Model", "requestId=$requestId, action=SET_MODEL, stage=start, model=$model")
+        try {
+            userPrefs.setModel(model)
+            AppLogger.i(requestId, "API Model", "requestId=$requestId, action=SET_MODEL, stage=success, result=success, model=$model")
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "API Model", "requestId=$requestId, action=SET_MODEL, stage=error, result=failure, model=$model, error=${e.message}", e)
+            throw e
+        }
+    }
+
+    /** OpenCode Go 的 API Key（供 UI 展示） */
+    suspend fun getOpenCodeApiKey(): String = userPrefs.getOpenCodeApiKey().first()
+
+    /** DeepSeek 的 API Key（供 UI 展示） */
+    suspend fun getDeepSeekApiKey(): String = userPrefs.getApiKey().first()
+
+    /**
+     * 测试与所选 AI 提供商的连通性。
+     *
+     * 发送一条最小请求到 Chat Completion 接口，用于在保存配置前校验：
+     * - API Key 是否有效（401 / 403）
+     * - 模型名是否正确（404）
+     * - 网络是否连通、Key 是否混入不可见控制字符（OkHttp 头校验异常）
+     *
+     * @param provider  AI 提供商（deepseek / opencode_go）
+     * @param apiKey    待测试的 API Key（无需先保存，便于先测再存）
+     * @param model     待测试的模型名
+     * @param requestId 请求唯一 ID，贯穿日志
+     * @return 成功时 message 为连接成功（含耗时），失败时给出可读原因
+     */
+    suspend fun testConnection(provider: String, apiKey: String, model: String, requestId: String): Result<String> {
+        val cleanKey = apiKey.filterNot { it.code < 0x20 || it.code == 0x7F }.trim()
+        AppLogger.d(requestId, "AppRepository", "testConnection start, provider=$provider, model=$model")
+        if (cleanKey.isBlank()) {
+            AppLogger.e(requestId, "AppRepository", "testConnection 失败：API Key 为空", null)
+            return Result.failure(Exception("API Key 不能为空"))
+        }
+        if (model.isBlank()) {
+            AppLogger.e(requestId, "AppRepository", "testConnection 失败：模型名为空", null)
+            return Result.failure(Exception("模型名不能为空"))
+        }
+        return try {
+            val api = plannerApiFor(provider)
+            val request = com.accounting.app.ai.model.ChatRequest(
+                model = model,
+                messages = listOf(
+                    com.accounting.app.ai.model.ChatMessage("user", "ping")
+                ),
+                temperature = 0.0,
+                stream = false
+            )
+            val start = System.currentTimeMillis()
+            val response = api.chatCompletion("Bearer $cleanKey", request)
+            val cost = System.currentTimeMillis() - start
+            if (response.isSuccessful) {
+                val msg = "连接成功（耗时 ${cost}ms）"
+                AppLogger.i(requestId, "AppRepository", "testConnection 成功：$msg")
+                Result.success(msg)
+            } else {
+                val code = response.code()
+                val body = response.errorBody()?.string().orEmpty().take(200)
+                AppLogger.e(requestId, "AppRepository", "testConnection 失败：HTTP $code, body=$body", null)
+                Result.failure(Exception("连接失败（HTTP $code）：${connectionErrorHint(provider, code)}"))
+            }
+        } catch (e: Exception) {
+            AppLogger.e(requestId, "AppRepository", "testConnection 异常：${e.message}", e)
+            Result.failure(Exception(connectionErrorMessage(e)))
+        }
+    }
+
+    /** 将 HTTP 状态码翻译为用户可读的失败提示 */
+    private fun connectionErrorHint(provider: String, code: Int): String = when (code) {
+        401 -> "API Key 无效或已过期"
+        402 -> "账户额度不足，请查看余额"
+        403 -> "没有访问该模型的权限"
+        404 -> "模型名不存在，请检查模型配置"
+        429 -> "请求过于频繁，请稍后再试"
+        in 500..599 -> "服务端异常，请稍后再试"
+        else -> "未知错误（$provider）"
+    }
+
+    /** 将网络/头校验异常翻译为用户可读的失败提示 */
+    private fun connectionErrorMessage(e: Exception): String {
+        val msg = e.message.orEmpty()
+        return when {
+            msg.contains("Unexpected char", ignoreCase = true) ->
+                "API Key 含非法字符（复制时可能带入空格或隐藏字符），请重新粘贴"
+            msg.contains("UnknownHost", ignoreCase = true) ->
+                "无法连接服务器，请检查网络"
+            msg.contains("Failed to connect", ignoreCase = true) ||
+                msg.contains("connect timed out", ignoreCase = true) ->
+                "网络连接失败，请检查网络"
+            msg.contains("timeout", ignoreCase = true) || msg.contains("timed out", ignoreCase = true) ->
+                "网络连接超时，请检查网络"
+            else -> msg.ifBlank { "连接失败" }
         }
     }
 
@@ -618,6 +767,8 @@ class AppRepository(private val context: Context) {
 ${statsLines.joinToString("\n")}
 """.trimIndent()
 
+            val provider = getProvider()
+            val model = getModel()
             val apiKey = getApiKey()
             if (apiKey.isBlank() || apiKey == "your_api_key_here") {
                 AppLogger.e(requestId, "AI请求发起", "对话查询未配置 API Key", null)
@@ -629,17 +780,17 @@ ${statsLines.joinToString("\n")}
             AppLogger.i(
                 requestId,
                 "AI请求发起",
-                "模型：${DeepSeekModels.FLASH}（对话查询），Prompt长度：${systemPrompt.length + userInput.length}字符，" +
+                "模型：${model}（对话查询，提供商：$provider），Prompt长度：${systemPrompt.length + userInput.length}字符，" +
                         "开始时间：$timeStr，API Key：$maskedKey，时间范围：${TimeUtils.formatTime(start)} 至 ${TimeUtils.formatTime(end)}"
             )
 
-            val response = deepSeekApi.chatCompletion(
+            val response = plannerApiFor(provider).chatCompletion(
                 "Bearer $apiKey",
-                ChatRequest(
-                    model = DeepSeekModels.FLASH,
+                com.accounting.app.ai.model.ChatRequest(
+                    model = model,
                     messages = listOf(
-                        ChatMessage("system", systemPrompt),
-                        ChatMessage("user", userInput)
+                        com.accounting.app.ai.model.ChatMessage("system", systemPrompt),
+                        com.accounting.app.ai.model.ChatMessage("user", userInput)
                     )
                 )
             )

@@ -1,9 +1,9 @@
 package com.accounting.app.ai.service
 
-import com.accounting.app.ai.service.DeepSeekApi
 import com.accounting.app.ai.model.DeepSeekModels
 import com.accounting.app.ai.model.ChatMessage
 import com.accounting.app.ai.model.ChatRequest
+import com.accounting.app.ai.service.DeepSeekApi
 import com.accounting.app.log.AppLogger
 import com.accounting.app.ui.model.AccountingCandidate
 import com.google.gson.Gson
@@ -19,8 +19,9 @@ import com.google.gson.JsonObject
  * @param apiKeyProvider   API Key 提供者（延迟获取，支持运行时修改）
  */
 class AccountingAiParser(
-    private val deepSeekApi: DeepSeekApi,
-    private val apiKeyProvider: suspend () -> String
+    private val apiProvider: suspend () -> DeepSeekApi,
+    private val apiKeyProvider: suspend () -> String,
+    private val modelProvider: suspend () -> String = { DeepSeekModels.FLASH }
 ) {
 
     /**
@@ -65,23 +66,24 @@ class AccountingAiParser(
             AppLogger.e(requestId, "AccountingAiParser", "未配置 API Key", null)
             throw Exception("未配置 API Key")
         }
+        val model = modelProvider()
 
         val maskedKey = AppLogger.maskApiKey(apiKey)
         AppLogger.i(
             requestId,
             "AccountingAiParser",
-            "模型：${DeepSeekModels.FLASH}，Prompt长度：${systemPrompt.length + userPrompt.length}字符，API Key：$maskedKey"
+            "模型：$model，Prompt长度：${systemPrompt.length + userPrompt.length}字符，API Key：$maskedKey"
         )
 
         val request = ChatRequest(
-            model = DeepSeekModels.FLASH,
+            model = model,
             messages = listOf(
                 ChatMessage("system", systemPrompt),
                 ChatMessage("user", userPrompt)
             )
         )
 
-        val response = deepSeekApi.chatCompletion("Bearer $apiKey", request)
+        val response = apiProvider().chatCompletion("Bearer $apiKey", request)
         if (response.isSuccessful) {
             val content = response.body()?.choices?.firstOrNull()?.message?.content
                 ?: throw Exception("AI 返回内容为空")

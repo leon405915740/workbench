@@ -12,14 +12,11 @@ import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.aigrowth.os.ui.onboarding.isOnboardingComplete
 import com.aigrowth.os.ui.onboarding.OnboardingScreen
-import com.aigrowth.os.ui.splash.SplashScreen
 import com.aigrowth.os.ui.theme.AIGrowthOSTheme
 import com.accounting.app.log.AppLogger
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,26 +36,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var showSplash by remember { mutableStateOf(true) }
                     val showOnboarding = remember {
                         mutableStateOf(!isOnboardingComplete(this))
                     }
 
                     when {
-                        showSplash -> {
-                            SplashScreen(
-                                onTimeout = {
-                                    val requestId = AppLogger.generateRequestId()
-                                    AppLogger.i(requestId, "MainActivity", "splashTimeout 完成")
-                                    showSplash = false
-                                },
-                                onSkip = {
-                                    val requestId = AppLogger.generateRequestId()
-                                    AppLogger.i(requestId, "MainActivity", "splashSkipped 完成")
-                                    showSplash = false
-                                }
-                            )
-                        }
                         showOnboarding.value -> {
                             OnboardingScreen(
                                 onComplete = {

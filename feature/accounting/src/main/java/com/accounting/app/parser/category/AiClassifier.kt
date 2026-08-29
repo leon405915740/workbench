@@ -8,10 +8,6 @@ import com.accounting.app.log.AppLogger
 import com.accounting.app.parser.model.MatchResult
 import com.accounting.app.parser.model.MatchSource
 import com.accounting.app.util.CategoryConstants
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
 
 /**
  * AI 兜底分类纠正器。
@@ -25,26 +21,16 @@ import java.util.concurrent.TimeUnit
  * - LRU 去重缓存（容量 100，1 小时有效），缓存 key 带收支方向，相同 description 不同方向不串缓存
  * - 所有异常 catch 后返回 null，调用方降级走 fallback
  */
-class AiClassifier(private val apiKeyProvider: suspend () -> String) {
+class AiClassifier(
+    private val apiProvider: suspend () -> DeepSeekApi,
+    private val apiKeyProvider: suspend () -> String,
+    private val modelProvider: suspend () -> String = { com.accounting.app.ai.model.DeepSeekModels.FLASH }
+) {
 
     /** LRU 去重缓存：description -> Pair(category, timestamp)，容量 100，1 小时有效 */
     private val cache = java.util.LinkedHashMap<String, Pair<String, Long>>()
     private val cacheCapacity = 100
     private val cacheTtl = 3600000L
-
-    /** 独立 Retrofit 实例（短超时，无 HttpLoggingInterceptor，避免 Release 包明文泄露 API Key） */
-    private val deepSeekApi: DeepSeekApi by lazy {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .build()
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://api.deepseek.com/")
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        retrofit.create(DeepSeekApi::class.java)
-    }
 
     /**
      * AI 兜底分类纠正入口。
@@ -95,16 +81,17 @@ $categoryList
 
             // 4. 记日志：API Key 用 maskApiKey 脱敏
             val maskedKey = AppLogger.maskApiKey(apiKey)
+            val model = modelProvider()
             logI(
                 requestId,
                 "AI请求发起",
-                "模型：${DeepSeekModels.FLASH}（分类兜底），Prompt长度：${systemPrompt.length + userPrompt.length}字符，API Key：$maskedKey",
+                "模型：$model（分类兜底），Prompt长度：${systemPrompt.length + userPrompt.length}字符，API Key：$maskedKey",
                 billIndex
             )
 
             // 5. 构造请求
             val request = ChatRequest(
-                model = DeepSeekModels.FLASH,
+                model = model,
                 messages = listOf(
                     ChatMessage("system", systemPrompt),
                     ChatMessage("user", userPrompt)
@@ -113,7 +100,7 @@ $categoryList
             )
 
             // 6. 发请求
-            val response = deepSeekApi.chatCompletion("Bearer $apiKey", request)
+            val response = apiProvider().chatCompletion("Bearer $apiKey", request)
 
             // 7. 处理响应
             if (response.isSuccessful) {

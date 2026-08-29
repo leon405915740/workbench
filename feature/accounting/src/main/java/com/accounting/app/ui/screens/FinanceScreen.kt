@@ -129,7 +129,12 @@ fun FinanceScreen(
                     )
                 }
                 if (uiState.dashboardMessages.isNotEmpty() || uiState.dashboardIsLoading) {
-                    item(key = "qa-inline") { FinanceQAResultInline(uiState) }
+                    item(key = "qa-inline") {
+                        FinanceQAResultInline(
+                            uiState = uiState,
+                            onClearDialog = viewModel::clearDashboardMessages
+                        )
+                    }
                 }
                 item(key = "list-title") {
                     Text(
@@ -662,7 +667,10 @@ private fun DetailRow(label: String, value: String, valueColor: Color) {
 // ===================== 问答结果内联区 =====================
 
 @Composable
-private fun FinanceQAResultInline(uiState: UiState) {
+private fun FinanceQAResultInline(
+    uiState: UiState,
+    onClearDialog: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -672,6 +680,25 @@ private fun FinanceQAResultInline(uiState: UiState) {
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "统计问答",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+            TextButton(onClick = onClearDialog) {
+                Text(
+                    text = "清空对话",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+        }
         uiState.dashboardMessages.takeLast(6).forEach { message ->
             when (message) {
                 is ChatMessage.UserMessage -> {

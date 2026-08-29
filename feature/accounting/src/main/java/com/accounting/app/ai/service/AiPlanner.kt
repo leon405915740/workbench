@@ -1,15 +1,16 @@
 package com.accounting.app.ai.service
 
-import com.accounting.app.ai.service.DeepSeekApi
 import com.accounting.app.ai.model.DeepSeekModels
 import com.accounting.app.ai.model.ChatMessage
 import com.accounting.app.ai.model.ChatRequest
+import com.accounting.app.ai.service.DeepSeekApi
 import com.accounting.app.log.AppLogger
 import com.google.gson.Gson
 
 class AiPlanner(
-    private val deepSeekApi: DeepSeekApi,
-    private val apiKeyProvider: suspend () -> String
+    private val apiProvider: suspend () -> DeepSeekApi,
+    private val apiKeyProvider: suspend () -> String,
+    private val modelProvider: suspend () -> String = { DeepSeekModels.FLASH }
 ) {
 
     suspend fun parse(input: String, requestId: String): com.accounting.app.ai.model.AiOutput {
@@ -57,23 +58,24 @@ class AiPlanner(
             AppLogger.e(requestId, "AI请求发起", "未配置 API Key", null)
             throw Exception("未配置 API Key")
         }
+        val model = modelProvider()
 
         val maskedKey = AppLogger.maskApiKey(apiKey)
         AppLogger.i(
             requestId,
             "AI请求发起",
-            "模型：${DeepSeekModels.FLASH}，Prompt长度：${systemPrompt.length + userPrompt.length}字符，API Key：$maskedKey"
+            "模型：$model，Prompt长度：${systemPrompt.length + userPrompt.length}字符，API Key：$maskedKey"
         )
 
         val request = ChatRequest(
-            model = DeepSeekModels.FLASH,
+            model = model,
             messages = listOf(
                 ChatMessage("system", systemPrompt),
                 ChatMessage("user", userPrompt)
             )
         )
 
-        val response = deepSeekApi.chatCompletion("Bearer $apiKey", request)
+        val response = apiProvider().chatCompletion("Bearer $apiKey", request)
         if (response.isSuccessful) {
             val content = response.body()?.choices?.firstOrNull()?.message?.content
                 ?: throw Exception("AI 返回内容为空")

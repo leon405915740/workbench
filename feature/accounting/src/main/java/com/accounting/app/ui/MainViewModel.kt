@@ -401,6 +401,16 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         }
     }
 
+    /** 清空统计问答对话（用户提问与 AI 回复一并清除） */
+    fun clearDashboardMessages() {
+        _uiState.update {
+            it.copy(
+                dashboardMessages = emptyList(),
+                dashboardIsLoading = false
+            )
+        }
+    }
+
     // ===================== 修改分类与记忆学习 =====================
 
     fun openEditDialog(message: ChatMessage.CardMessage) {

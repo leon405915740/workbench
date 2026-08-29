@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aigrowth.os.core.database.workbench.entity.Habit
 import java.time.LocalDate
@@ -58,8 +57,6 @@ fun WeeklyHabitTracker(
                     Text(
                         habit.title,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.width(76.dp)
                     )
                     week.forEach { day ->

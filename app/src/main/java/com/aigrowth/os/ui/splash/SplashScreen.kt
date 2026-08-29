@@ -91,7 +91,7 @@ fun SplashScreen(
 
             // 副标题
             Text(
-                text = "健身 · 自媒体 · 英语 · 记账",
+                text = "计划 · 习惯 · 阅读 · 运动 · 记账 · 随笔",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center,

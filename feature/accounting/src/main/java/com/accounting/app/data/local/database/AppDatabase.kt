@@ -197,7 +197,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_6_7 = object : Migration(6, 7) {
+        internal val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE expense ADD COLUMN attachmentPath TEXT")
                 database.execSQL("ALTER TABLE income ADD COLUMN attachmentPath TEXT")
