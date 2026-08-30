@@ -14,5 +14,7 @@ data class Habit(
     val pinned: Boolean,
     val imageUri: String?,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val category: ExerciseCategoryEnum? = null,
+    val pinnedAt: Long? = null
 )

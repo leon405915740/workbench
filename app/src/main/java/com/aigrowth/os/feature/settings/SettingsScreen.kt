@@ -2,6 +2,7 @@ package com.aigrowth.os.feature.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -16,12 +17,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.accounting.app.AccountingApp
 import com.accounting.app.log.AppLogger
-import com.aigrowth.os.core.design.Morandi
-import com.aigrowth.os.core.design.MorandiCard
+import com.aigrowth.os.ui.common.WorkbenchCard
+import com.aigrowth.os.ui.common.WorkbenchTopBar
+import com.aigrowth.os.ui.theme.AccentGreen
+import com.aigrowth.os.ui.theme.InkSecondary
+import com.aigrowth.os.ui.theme.InkText
+import com.aigrowth.os.ui.theme.ModuleBlue
+import com.aigrowth.os.ui.theme.PaperBg
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateToMemoryMapping: () -> Unit
@@ -69,112 +74,100 @@ fun SettingsScreen(
         } ?: AppLogger.i(requestId, "SettingsScreen", "requestLogExport 取消")
         }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "设置",
-                        fontWeight = FontWeight.Bold,
-                        color = Morandi.TextPrimary
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Morandi.BackgroundGray
-                )
-            )
-        },
-        containerColor = Morandi.BackgroundGray
-    ) { padding ->
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PaperBg)
+    ) {
+        WorkbenchTopBar(
+            title = "设置",
+            subtitle = "管理记忆分类与数据导出",
+            icon = Icons.Default.Settings,
+            iconTint = ModuleBlue
+        )
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ===== 卡片 1: 记忆与分类管理 =====
             item {
-                MorandiCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "记忆与分类管理",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Morandi.TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                WorkbenchCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "记忆与分类管理",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = InkText
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onNavigateToMemoryMapping() }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "进入记忆与分类管理",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Morandi.TextPrimary
-                            )
-                            Icon(
-                                Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = Morandi.TextSecondary
-                            )
-                        }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToMemoryMapping() }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "进入记忆与分类管理",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = InkText
+                        )
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = InkSecondary
+                        )
                     }
                 }
             }
 
             // ===== 卡片 2: 数据管理 =====
             item {
-                MorandiCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "数据管理",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Morandi.TextPrimary
+                WorkbenchCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "数据管理",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = InkText
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            val requestId = AppLogger.generateRequestId()
+                            pendingCsvRequestId = requestId
+                            AppLogger.i(requestId, "SettingsScreen", "requestCsvExport 入口")
+                            csvLauncher.launch("记账数据_${System.currentTimeMillis()}.csv")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = AccentGreen
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("导出 CSV 数据")
+                    }
 
-                        OutlinedButton(
-                            onClick = {
-                                val requestId = AppLogger.generateRequestId()
-                                pendingCsvRequestId = requestId
-                                AppLogger.i(requestId, "SettingsScreen", "requestCsvExport 入口")
-                                csvLauncher.launch("记账数据_${System.currentTimeMillis()}.csv")
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Morandi.BrandPrimary
-                            )
-                        ) {
-                            Icon(Icons.Default.FileDownload, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("导出 CSV 数据")
-                        }
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedButton(
-                            onClick = {
-                                val requestId = AppLogger.generateRequestId()
-                                pendingLogRequestId = requestId
-                                AppLogger.i(requestId, "SettingsScreen", "requestLogExport 入口")
-                                logLauncher.launch("记账日志_${System.currentTimeMillis()}.log")
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Morandi.BrandPrimary
-                            )
-                        ) {
-                            Icon(Icons.Default.BugReport, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("导出日志文件")
-                        }
+                    OutlinedButton(
+                        onClick = {
+                            val requestId = AppLogger.generateRequestId()
+                            pendingLogRequestId = requestId
+                            AppLogger.i(requestId, "SettingsScreen", "requestLogExport 入口")
+                            logLauncher.launch("记账日志_${System.currentTimeMillis()}.log")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = AccentGreen
+                        )
+                    ) {
+                        Icon(Icons.Default.BugReport, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("导出日志文件")
                     }
                 }
             }

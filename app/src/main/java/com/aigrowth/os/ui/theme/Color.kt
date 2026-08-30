@@ -2,47 +2,47 @@ package com.aigrowth.os.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ===== 猫咪生活报 · 复古报刊编辑部色板（卡通小猫主题） =====
+// ===== 生活手记 · 统一设计 token（参考 android-ui-mockups） =====
 
-// 页面与表面（米白旧报纸）
-val PaperBg = Color(0xFFF2E9D5)
-val PaperCard = Color(0xFFFAF5E9)
-val PaperNested = Color(0xFFF5EDDA)
+// 页面与表面（暖米白）
+val PaperBg = Color(0xFFF7F6F3)
+val PaperCard = Color(0xFFFFFFFF)
+val PaperNested = Color(0xFFF1F0EC)
 
 // 边框
-val PaperBorder = Color(0xFFE6DCC6)
-val PaperBorderStrong = Color(0xFFD8C9A9)
+val PaperBorder = Color(0xFFE8E6E1)
+val PaperBorderStrong = Color(0xFFDEDCD6)
 
-// 文字（浅棕墨字）
-val InkText = Color(0xFF4A3B28)
-val InkSecondary = Color(0xFF8A7457)
-val InkTertiary = Color(0xFFB19A77)
+// 文字（深灰墨）
+val InkText = Color(0xFF1F1F1F)
+val InkSecondary = Color(0xFF6B6B6B)
+val InkTertiary = Color(0xFF9A9A9A)
 
-// 主色（橘黄点缀，特色主色）
-val AccentOrange = Color(0xFFD9832B)
-val AccentOrangeMuted = Color(0xFFF6E7CF)
-val OnAccentOrange = Color(0xFF3A2A18)
+// 主色（深青绿）
+val AccentGreen = Color(0xFF397565)
+val AccentGreenSoft = Color(0xFFE8F0ED)
+val OnAccentGreen = Color(0xFFFFFFFF)
 
-// 模块色（复古暖色：墨绿 / 墨蓝 / 赭黄 / 陶土 / 橄榄）
-val ModuleGreen = Color(0xFF3F6B52)
-val ModuleBlue = Color(0xFF5B718F)
-val ModuleOchre = Color(0xFFB5742C)
-val ModuleClay = Color(0xFFB35B3E)
-val ModuleOlive = Color(0xFF8A6D44)
+// 模块装饰色（绿/蓝/赭/陶/橄榄）
+val ModuleGreen = Color(0xFF397565)
+val ModuleBlue = Color(0xFF4A7C8C)
+val ModuleOchre = Color(0xFFA67C00)
+val ModuleClay = Color(0xFFA85D4A)
+val ModuleOlive = Color(0xFF7A7A5A)
 
 // 危险色
-val DangerInk = Color(0xFFB3483A)
-val DangerInkMuted = Color(0xFFF6E2DB)
+val DangerInk = Color(0xFFC45C4A)
+val DangerInkMuted = Color(0xFFF7E8E5)
 
-// 抽屉 / 侧栏（旧墨棕面板）
-val DrawerBg = Color(0xFF4A3828)
-val DrawerBgTop = Color(0xFF5A4531)
-val DrawerText = Color(0xFFF6ECD7)
+// 抽屉 / 侧栏（深色渐变面板）
+val DrawerBg = Color(0xFF252522)
+val DrawerBgTop = Color(0xFF2F2F2C)
+val DrawerText = Color(0xFFF7F6F3)
 
-// ===== 兼容旧命名别名（现有屏幕代码引用，值已替换为报刊色板，保证编译通过） =====
-val WeChatGreen = AccentOrange
-val WeChatGreenLight = AccentOrangeMuted
-val WeChatGreenDark = Color(0xFF8A5B1F)
+// ===== 兼容旧命名别名（现有屏幕代码引用，值映射到生活手记 token，保证编译通过；新代码请使用上方新 token） =====
+val WeChatGreen = AccentGreen
+val WeChatGreenLight = AccentGreenSoft
+val WeChatGreenDark = Color(0xFF2E5C4E)
 
 val BackgroundGray = PaperBg
 val CardWhite = PaperCard
@@ -53,7 +53,7 @@ val TextAmount = ModuleGreen
 val TextIncome = ModuleGreen
 val TextDelete = DangerInk
 
-val BubbleUser = Color(0xFFEADFC6)
+val BubbleUser = Color(0xFFE8F0ED)
 val BubbleAi = PaperNested
 val BubbleError = DangerInkMuted
 
@@ -65,20 +65,20 @@ val NavInactive = InkTertiary
 val NavActive = ModuleGreen
 
 val DividerColor = PaperBorder
-val SageGreen = Color(0xFF9DBAA9)
-val CardShadow = Color(0xFF4A3B28)
+val SageGreen = Color(0xFFB9C6C0)
+val CardShadow = Color(0xFF1F1F1F)
 val BorderDefault = PaperBorderStrong
 
-val Primary = AccentOrange
-val PrimaryDark = Color(0xFF8A5B1F)
-val PrimaryLight = AccentOrangeMuted
+val Primary = AccentGreen
+val PrimaryDark = Color(0xFF2E5C4E)
+val PrimaryLight = AccentGreenSoft
 val Secondary = ModuleGreen
-val SecondaryDark = Color(0xFF2E553F)
-val SecondaryLight = Color(0xFF9DBAA9)
+val SecondaryDark = Color(0xFF2E5C4E)
+val SecondaryLight = Color(0xFFB9C6C0)
 val Background = PaperBg
 val BackgroundDark = DrawerBg
 val Surface = PaperCard
-val SurfaceDark = Color(0xFF3A2D1C)
+val SurfaceDark = Color(0xFF2E5C4E)
 val OnBackground = InkText
 val OnBackgroundDark = PaperCard
 val OnSurface = InkText

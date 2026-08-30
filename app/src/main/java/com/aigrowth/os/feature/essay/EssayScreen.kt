@@ -1,8 +1,12 @@
 package com.aigrowth.os.feature.essay
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -19,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.aigrowth.os.core.database.workbench.entity.Essay
 import com.aigrowth.os.ui.common.*
+import com.aigrowth.os.ui.theme.*
 import com.aigrowth.os.util.WorkbenchImageStore
 import java.time.LocalDate
 
@@ -36,8 +42,13 @@ fun EssayScreen(vm: EssayViewModel = hiltViewModel()) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            WorkbenchTopBar("随笔", "记录想法，留住此刻")
-            SearchField(value = search, onChange = vm::setSearch, placeholder = "搜索标题、正文或标签")
+            WorkbenchTopBar(
+                title = "随笔",
+                subtitle = "记录想法，留住此刻",
+                icon = Icons.Default.EditNote,
+                iconTint = ModuleOlive
+            )
+            EssayHeader(search = search, onChange = vm::setSearch)
             Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f)) {
                 if (items.isEmpty()) {
@@ -49,7 +60,7 @@ fun EssayScreen(vm: EssayViewModel = hiltViewModel()) {
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(items, key = { it.id }) { item ->
                             EssayCard(
@@ -66,7 +77,7 @@ fun EssayScreen(vm: EssayViewModel = hiltViewModel()) {
 
         FloatingActionButton(
             onClick = { editorTarget = null; showEditor = true },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = "新增随笔")
         }
@@ -99,6 +110,16 @@ fun EssayScreen(vm: EssayViewModel = hiltViewModel()) {
 }
 
 @Composable
+private fun EssayHeader(search: String, onChange: (String) -> Unit) {
+    WorkbenchCard(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 10.dp, horizontal = 0.dp)
+    ) {
+        SearchField(value = search, onChange = onChange, placeholder = "搜索标题、正文或标签")
+    }
+}
+
+@Composable
 private fun EssayCard(
     item: Essay,
     onTogglePinned: () -> Unit,
@@ -106,38 +127,27 @@ private fun EssayCard(
     onDelete: () -> Unit
 ) {
     val tags = item.tags.split(",").filter { it.isNotBlank() }
-    WorkbenchCard(contentPadding = PaddingValues(14.dp)) {
+    WorkbenchCard(contentPadding = PaddingValues(12.dp)) {
         Row(verticalAlignment = Alignment.Top) {
-            if (item.layout == "quote") {
-                Column(Modifier.weight(1f).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(6.dp))
-                    Text(item.content, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                Column(Modifier.weight(1f)) {
+            ModuleIconBadge(icon = Icons.Default.EditNote, tint = ModuleOlive)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                if (item.layout == "quote") {
+                    Column(Modifier.padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(6.dp))
+                        Text(item.content, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = InkSecondary)
+                    }
+                } else {
                     Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                     if (item.content.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
-                        Text(item.content, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
+                        Spacer(Modifier.height(3.dp))
+                        Text(item.content, style = MaterialTheme.typography.bodySmall, color = InkSecondary, maxLines = 3)
                     }
                 }
             }
-            Spacer(Modifier.width(4.dp))
-            Column {
-                if (item.pinned) {
-                    Icon(Icons.Default.PushPin, null, tint = Color(0xFF397565), modifier = Modifier.size(16.dp).align(Alignment.CenterHorizontally))
-                }
-                IconButton(onClick = onTogglePinned) {
-                    Icon(Icons.Default.PushPin, contentDescription = "置顶", tint = if (item.pinned) Color(0xFF397565) else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "编辑", modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                }
-            }
+            Spacer(Modifier.width(6.dp))
+            ToggleCircle(selected = item.pinned, color = ModuleOlive, onClick = onTogglePinned)
         }
         if (item.imageUri != null) {
             Spacer(Modifier.height(8.dp))
@@ -148,8 +158,63 @@ private fun EssayCard(
             item.mood?.let { TagChip(it) }
             if (item.type == "quote") TagChip("引文")
             tags.forEach { TagChip(it) }
-            Text(formatDate(item.date), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(formatDate(item.date), style = MaterialTheme.typography.labelSmall, color = InkSecondary)
         }
+        Spacer(Modifier.height(4.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            PinAction(
+                pinned = item.pinned,
+                tint = if (item.pinned) ModuleOlive else InkSecondary,
+                onClick = onTogglePinned
+            )
+            MiniAction(onClick = onEdit) {
+                Icon(Icons.Default.Edit, contentDescription = "编辑", tint = InkSecondary, modifier = Modifier.size(16.dp))
+            }
+            MiniAction(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "删除", tint = DangerInk, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleIconBadge(icon: ImageVector, tint: Color) {
+    Box(
+        modifier = Modifier.size(44.dp).background(tint.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+    }
+}
+
+@Composable
+private fun ToggleCircle(selected: Boolean, color: Color, onClick: () -> Unit, unselectedIcon: ImageVector? = null) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .then(
+                if (selected) Modifier.background(color)
+                else Modifier.border(2.dp, color, CircleShape)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
+            Icon(Icons.Default.Check, contentDescription = "已置顶", tint = Color.White, modifier = Modifier.size(20.dp))
+        } else {
+            unselectedIcon?.let { Icon(it, contentDescription = null, tint = color, modifier = Modifier.size(16.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun MiniAction(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
 

@@ -24,5 +24,8 @@ import androidx.room.Index
 data class HabitLog(
     val habitId: String,
     val date: String,
-    val checkedAt: Long
+    val checkedAt: Long,
+    val durationMinutes: Int? = null,
+    val note: String? = null,
+    val category: ExerciseCategoryEnum? = null
 )

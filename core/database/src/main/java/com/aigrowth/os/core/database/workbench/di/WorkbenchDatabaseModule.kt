@@ -24,7 +24,8 @@ object WorkbenchDatabaseModule {
             context,
             WorkbenchDatabase::class.java,
             "workbench.db"
-        ).build()
+        ).addMigrations(WorkbenchDatabase.MIGRATION_1_2, WorkbenchDatabase.MIGRATION_2_3)
+            .build()
     }
 
     @Provides
@@ -38,6 +39,9 @@ object WorkbenchDatabaseModule {
 
     @Provides
     fun provideReadingItemDao(database: WorkbenchDatabase): ReadingItemDao = database.readingItemDao()
+
+    @Provides
+    fun provideReadingLogDao(database: WorkbenchDatabase): ReadingLogDao = database.readingLogDao()
 
     @Provides
     fun provideExerciseItemDao(database: WorkbenchDatabase): ExerciseItemDao = database.exerciseItemDao()

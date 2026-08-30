@@ -18,5 +18,6 @@ data class PlanItem(
     val planDate: String,
     val imageUri: String?,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val completedAt: Long? = null
 )

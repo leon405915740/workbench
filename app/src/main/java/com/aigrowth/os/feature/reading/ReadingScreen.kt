@@ -1,10 +1,14 @@
 package com.aigrowth.os.feature.reading
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -20,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.aigrowth.os.core.database.workbench.entity.ReadingItem
 import com.aigrowth.os.ui.common.*
+import com.aigrowth.os.ui.theme.*
 import com.aigrowth.os.util.WorkbenchImageStore
 import java.time.LocalDate
 
@@ -27,21 +33,28 @@ import java.time.LocalDate
 @Composable
 fun ReadingScreen(vm: ReadingViewModel = hiltViewModel()) {
     val items by vm.items.collectAsState()
+    val archived by vm.archived.collectAsState()
     val search by vm.search.collectAsState()
     val stats by vm.stats.collectAsState()
+    val readingToday by vm.readingToday.collectAsState()
     var editorTarget by remember { mutableStateOf<ReadingItem?>(null) }
+    var archivedExpanded by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<ReadingItem?>(null) }
     val context = LocalContext.current
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            WorkbenchTopBar("阅读", "每天读一点，积少成多")
-            ReadingStatsRow(stats)
-            SearchField(value = search, onChange = vm::setSearch, placeholder = "搜索书名或备注")
+            WorkbenchTopBar(
+                title = "阅读",
+                subtitle = "每天读一点，积少成多",
+                icon = Icons.Default.AutoStories,
+                iconTint = ModuleBlue
+            )
+            ReadingHeader(stats = stats, todayAmount = readingToday, search = search, onChange = vm::setSearch)
             Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f)) {
-                if (items.isEmpty()) {
+                if (items.isEmpty() && archived.isEmpty()) {
                     EmptyState(
                         icon = Icons.Default.MenuBook,
                         title = if (search.isBlank()) "还没有阅读记录" else "没有匹配的结果",
@@ -50,9 +63,9 @@ fun ReadingScreen(vm: ReadingViewModel = hiltViewModel()) {
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(items, key = { it.id }) { item ->
+                        items(items, key = { "reading|${it.id}" }) { item ->
                             ReadingCard(
                                 item = item,
                                 onIncrement = { vm.increment(item, 10f) },
@@ -61,6 +74,20 @@ fun ReadingScreen(vm: ReadingViewModel = hiltViewModel()) {
                                 onDelete = { pendingDelete = item }
                             )
                         }
+                        if (archived.isNotEmpty()) {
+                            item(key = "archived_header") {
+                                ReadingArchivedHeader(
+                                    count = archived.size,
+                                    expanded = archivedExpanded,
+                                    onToggle = { archivedExpanded = !archivedExpanded }
+                                )
+                            }
+                            if (archivedExpanded) {
+                                items(archived, key = { "arch|${it.id}" }) { item ->
+                                    ReadingArchivedCard(item = item)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -68,7 +95,7 @@ fun ReadingScreen(vm: ReadingViewModel = hiltViewModel()) {
 
         FloatingActionButton(
             onClick = { editorTarget = null; showEditor = true },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = "新增阅读")
         }
@@ -101,17 +128,72 @@ fun ReadingScreen(vm: ReadingViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun ReadingStatsRow(stats: ReadingStats) {
-    WorkbenchCard(modifier = Modifier.padding(horizontal = 16.dp), contentPadding = PaddingValues(16.dp)) {
+private fun ReadingHeader(stats: ReadingStats, todayAmount: Float, search: String, onChange: (String) -> Unit) {
+    WorkbenchCard(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 14.dp, horizontal = 0.dp)
+    ) {
+        SearchField(value = search, onChange = onChange, placeholder = "搜索书名或备注")
+        Spacer(Modifier.height(12.dp))
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Text("阅读概览", style = MaterialTheme.typography.labelMedium, color = InkSecondary)
+            Text(
+                "${stats.total} 本在读 · ${stats.completed} 本已完成 · 累计 ${formatProgress(stats.currentSum)} · 今日阅读 ${formatProgress(todayAmount)}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReadingArchivedHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 4.dp, vertical = 10.dp)
+    ) {
+        Text(
+            "已完成归档",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Medium,
+            color = InkText
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            "($count)",
+            style = MaterialTheme.typography.labelSmall,
+            color = InkSecondary
+        )
+        Spacer(Modifier.weight(1f))
+        Icon(
+            if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = if (expanded) "收起归档" else "展开归档",
+            tint = InkTertiary,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun ReadingArchivedCard(item: ReadingItem) {
+    WorkbenchCard(contentPadding = PaddingValues(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            ModuleIconBadge(icon = Icons.Default.AutoStories, tint = ModuleBlue)
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("阅读概览", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    "${stats.total} 本在读 · ${stats.completed} 本已完成 · 累计 ${formatProgress(stats.currentSum)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    "已完成 · ${formatProgress(item.current)} ${item.unit}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = InkSecondary
                 )
             }
+            Icon(Icons.Default.CheckCircle, contentDescription = "已完成", tint = ModuleBlue, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -125,51 +207,95 @@ private fun ReadingCard(
     onDelete: () -> Unit
 ) {
     val progress = if (item.target <= 0f) 0f else (item.current / item.target).coerceIn(0f, 1f)
-    WorkbenchCard(contentPadding = PaddingValues(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f, fill = false))
-                    if (item.pinned) Icon(Icons.Default.PushPin, null, tint = Color(0xFF397565), modifier = Modifier.size(16.dp))
-                }
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth().height(8.dp),
-                    color = Color(0xFF397565),
-                    trackColor = Color(0xFFDDE7E2)
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    "${formatProgress(item.current)} / ${formatProgress(item.target)} ${item.unit}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (item.note.isNotBlank()) {
-                    Text(item.note, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                }
-                Text(formatDate(item.date), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (item.imageUri != null) {
+    val completed = item.target > 0f && item.current >= item.target
+    WorkbenchCard(contentPadding = PaddingValues(12.dp)) {
+        Column {
+            Row(verticalAlignment = Alignment.Top) {
+                ModuleIconBadge(icon = Icons.Default.AutoStories, tint = ModuleBlue)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(8.dp))
-                    WorkbenchImage(item.imageUri, Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(10.dp)))
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                        color = ModuleBlue,
+                        trackColor = AccentGreenSoft
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "${formatProgress(item.current)} / ${formatProgress(item.target)} ${item.unit}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = InkSecondary
+                    )
+                    if (item.note.isNotBlank()) {
+                        Text(item.note, style = MaterialTheme.typography.labelSmall, color = InkSecondary, maxLines = 1)
+                    }
+                    Text(formatDate(item.date), style = MaterialTheme.typography.labelSmall, color = InkSecondary)
+                    if (item.imageUri != null) {
+                        Spacer(Modifier.height(8.dp))
+                        WorkbenchImage(item.imageUri, Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(10.dp)))
+                    }
                 }
+                Spacer(Modifier.width(6.dp))
+                ToggleCircle(selected = completed, color = ModuleBlue, onClick = onIncrement, unselectedIcon = Icons.Default.Add)
             }
-            Spacer(Modifier.width(4.dp))
-            Column {
-                IconButton(onClick = onIncrement) {
-                    Icon(Icons.Default.Add, contentDescription = "增加进度", tint = Color(0xFF397565), modifier = Modifier.size(18.dp))
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                PinAction(
+                    pinned = item.pinned,
+                    tint = if (item.pinned) ModuleBlue else InkSecondary,
+                    onClick = onTogglePinned
+                )
+                MiniAction(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "编辑", tint = InkSecondary, modifier = Modifier.size(16.dp))
                 }
-                IconButton(onClick = onTogglePinned) {
-                    Icon(Icons.Default.PushPin, contentDescription = "置顶", tint = if (item.pinned) Color(0xFF397565) else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "编辑", modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                MiniAction(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "删除", tint = DangerInk, modifier = Modifier.size(16.dp))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ModuleIconBadge(icon: ImageVector, tint: Color) {
+    Box(
+        modifier = Modifier.size(44.dp).background(tint.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+    }
+}
+
+@Composable
+private fun ToggleCircle(selected: Boolean, color: Color, onClick: () -> Unit, unselectedIcon: ImageVector? = null) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .then(
+                if (selected) Modifier.background(color)
+                else Modifier.border(2.dp, color, CircleShape)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
+            Icon(Icons.Default.Check, contentDescription = "已读完", tint = Color.White, modifier = Modifier.size(20.dp))
+        } else {
+            unselectedIcon?.let { Icon(it, contentDescription = null, tint = color, modifier = Modifier.size(16.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun MiniAction(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
 

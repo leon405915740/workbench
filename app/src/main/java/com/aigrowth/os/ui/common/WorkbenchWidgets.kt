@@ -1,8 +1,16 @@
 package com.aigrowth.os.ui.common
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -11,11 +19,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -86,6 +93,27 @@ fun TagChip(text: String, modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSecondaryContainer,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
+/** 置顶小按钮：未置顶为空心图钉、已置顶为实心图钉（共用，供各列表页复用）。 */
+@Composable
+fun PinAction(
+    pinned: Boolean,
+    tint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = if (pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+            contentDescription = if (pinned) "取消置顶" else "置顶",
+            tint = tint,
+            modifier = Modifier.size(16.dp)
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.aigrowth.os
 
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -32,10 +34,9 @@ import com.accounting.app.ui.screens.FinanceScreen
 import com.accounting.app.ui.screens.MemoryMappingManageScreen
 import com.aigrowth.os.feature.clipping.ClippingScreen
 import com.aigrowth.os.feature.essay.EssayScreen
-import com.aigrowth.os.feature.exercise.ExerciseScreen
+import com.aigrowth.os.feature.habit.ExerciseTimerScreen
 import com.aigrowth.os.feature.habit.HabitScreen
 import com.aigrowth.os.feature.home.HomeScreen
-import com.aigrowth.os.feature.insight.InsightScreen
 import com.aigrowth.os.feature.plan.PlanScreen
 import com.aigrowth.os.feature.profile.ProfileScreen
 import com.aigrowth.os.feature.profile.ProfileStore
@@ -86,9 +87,23 @@ fun AIGrowthOSApp() {
                     NavHost(navController, startDestination = Screen.Home.route, modifier = Modifier.fillMaxSize()) {
                         composable(Screen.Home.route) { HomeScreen(onNavigate = navigateTo) }
                         composable(Screen.Plan.route) { PlanScreen() }
-                        composable(Screen.Habits.route) { HabitScreen() }
+                        composable(
+                            route = "${Screen.Habits.route}?date={date}",
+                            arguments = listOf(navArgument("date") { type = NavType.StringType; nullable = true; defaultValue = null })
+                        ) { backStackEntry ->
+                            HabitScreen(date = backStackEntry.arguments?.getString("date"))
+                        }
                         composable(Screen.Reading.route) { ReadingScreen() }
-                        composable(Screen.Exercise.route) { ExerciseScreen() }
+                        // 运动计时独立入口：首页「记运动」直接进入正计时，结束后可编辑备注/时长
+                        composable(
+                            route = "${Screen.Exercise.route}?date={date}&type={type}",
+                            arguments = listOf(
+                                navArgument("date") { type = NavType.StringType; nullable = true; defaultValue = null },
+                                navArgument("type") { type = NavType.StringType; nullable = true; defaultValue = null }
+                            )
+                        ) {
+                            ExerciseTimerScreen(onNavigateBack = { navController.popBackStack() })
+                        }
                         composable(
                             route = "${Screen.Record.route}?openAi={openAi}",
                             arguments = listOf(navArgument("openAi") { type = NavType.BoolType; defaultValue = false })
@@ -100,7 +115,6 @@ fun AIGrowthOSApp() {
                         }
                         composable(Screen.Essay.route) { EssayScreen() }
                         composable(Screen.Clipping.route) { ClippingScreen() }
-                        composable(Screen.Insight.route) { InsightScreen() }
                         composable(Screen.Settings.route) { SettingsScreen(onNavigateToMemoryMapping = { navController.navigate(Screen.MemoryMapping.route) }) }
                         composable(Screen.Profile.route) { ProfileScreen(onNavigateToSettings = { navController.navigate(Screen.Settings.route) }) }
                         composable(Screen.MemoryMapping.route) {
@@ -133,26 +147,27 @@ private fun SideNavigationBar(currentRoute: String?, width: androidx.compose.ui.
         NavItem(Screen.Plan.route, "今日计划", Icons.Default.Checklist),
         NavItem(Screen.Habits.route, "习惯打卡", Icons.Default.EventAvailable),
         NavItem(Screen.Reading.route, "阅读", Icons.Default.AutoStories),
-        NavItem(Screen.Exercise.route, "运动", Icons.Default.FitnessCenter),
         NavItem(Screen.Record.route, "记账", Icons.Default.Payments),
         NavItem(Screen.Essay.route, "随笔", Icons.Default.DriveFileRenameOutline),
-        NavItem(Screen.Clipping.route, "剪报", Icons.Default.Newspaper),
-        NavItem(Screen.Insight.route, "洞察", Icons.Default.Leaderboard)
+        NavItem(Screen.Clipping.route, "剪报", Icons.Default.Newspaper)
     )
-    val selectedColor = Color(0xFF397565)
-    val inactiveColor = Color(0xFF687069)
+    val drawerText = Color(0xFFF7F6F3)
+    val drawerMute = Color(0x8CF7F6F3)
 
     Surface(
         modifier = Modifier
             .width(width)
             .fillMaxHeight()
             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Vertical)),
-        color = Color(0xFFF0F5F1),
+        color = Color.Transparent,
         tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxHeight()
+                .background(
+                    Brush.verticalGradient(listOf(Color(0xFF2F2F2C), Color(0xFF252522)))
+                )
                 .padding(horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -166,15 +181,20 @@ private fun SideNavigationBar(currentRoute: String?, width: androidx.compose.ui.
                     .padding(top = 20.dp, bottom = 24.dp)
                     .size(width - 12.dp)
                     .clip(CircleShape)
-                    .background(if (profileSelected) Color(0xFFDCEBE5) else Color(0xFFD6EAE2))
+                    .background(
+                        if (profileSelected)
+                            Brush.linearGradient(listOf(Color(0xFF397565), Color(0xFF2E5C4E)))
+                        else
+                            Brush.linearGradient(listOf(Color(0xFF3A3A37), Color(0xFF2A2A28)))
+                    )
                     .clickable { onNavigateToProfile() },
                 contentAlignment = Alignment.Center
             ) {
                 ProfileAvatar(
                     selected = profileSelected,
                     size = (width - 12.dp) * 1f,
-                    selectedColor = selectedColor,
-                    inactiveColor = inactiveColor
+                    selectedColor = drawerText,
+                    inactiveColor = drawerMute
                 )
             }
 
@@ -190,8 +210,8 @@ private fun SideNavigationBar(currentRoute: String?, width: androidx.compose.ui.
                         label = item.label,
                         icon = item.icon,
                         selected = selected,
-                        selectedColor = selectedColor,
-                        inactiveColor = inactiveColor,
+                        selectedColor = drawerText,
+                        inactiveColor = drawerMute,
                         onClick = { onNavigate(item.route) }
                     )
                 }
@@ -240,17 +260,26 @@ private fun DrawerItem(
     inactiveColor: Color,
     onClick: () -> Unit
 ) {
-    val contentColor = if (selected) selectedColor else inactiveColor
-    Column(
-        modifier = Modifier
+    val contentColor = if (selected) Color(0xFFFFFFFF) else inactiveColor
+    val modifier = if (selected) {
+        Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(14.dp))
             .background(
-                color = if (selected) Color(0xFFDCEBE5) else Color.Transparent,
-                shape = RoundedCornerShape(18.dp)
+                Brush.verticalGradient(listOf(Color(0xFF397565), Color(0xFF2E5C4E)))
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 10.dp),
+            .padding(horizontal = 4.dp, vertical = 10.dp)
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp)
+    }
+    Column(
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -278,7 +307,6 @@ sealed class Screen(val route: String) {
     data object Record : Screen("record")
     data object Essay : Screen("essay")
     data object Clipping : Screen("clipping")
-    data object Insight : Screen("insight")
     data object Settings : Screen("settings")
     data object Profile : Screen("profile")
     data object MemoryMapping : Screen("memory_mapping")

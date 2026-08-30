@@ -22,6 +22,8 @@ data class FocusItem(
     val subtitle: String
 )
 
+private const val DAILY_EXERCISE_GOAL_MINUTES = 60
+
 data class OverviewUi(
     val planTotal: Int = 0,
     val planDone: Int = 0,
@@ -68,10 +70,13 @@ class HomeViewModel @Inject constructor(
     private val essays = essayDao.getAll()
     private val clippings = clippingDao.getAll()
 
-    val overview: StateFlow<OverviewUi> = combine(plans, habits, logs, reading, exercise) { p, h, l, r, e ->
+    val overview: StateFlow<OverviewUi> = combine(plans, habits, logs, reading) { p, h, l, r ->
         val activeIds = h.filter { it.active }.map { it.id }.toSet()
         val todayPlans = p.filter { it.planDate == today }
         val priorityOrder = mapOf("P0" to 0, "P1" to 1, "P2" to 2)
+        val todayExerciseMinutes = l
+            .filter { it.date == today && it.category != null }
+            .sumOf { (it.durationMinutes ?: 0).toInt() }
         OverviewUi(
             planTotal = todayPlans.size,
             planDone = todayPlans.count { it.done },
@@ -79,8 +84,8 @@ class HomeViewModel @Inject constructor(
             habitDoneToday = l.count { it.date == today && it.habitId in activeIds },
             readingTotal = r.size,
             readingCompleted = r.count { it.current >= it.target },
-            exerciseTotal = e.size,
-            exerciseCompleted = e.count { it.current >= it.target },
+            exerciseTotal = DAILY_EXERCISE_GOAL_MINUTES,
+            exerciseCompleted = todayExerciseMinutes,
             keyTodos = todayPlans.filter { !it.done }.sortedBy { priorityOrder[it.priority] ?: 3 }.take(3),
             activeHabits = h.filter { it.active },
             habitChecked = l.map { "${it.habitId}|${it.date}" }.toSet()
