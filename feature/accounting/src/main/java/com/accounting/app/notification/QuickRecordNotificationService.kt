@@ -1,6 +1,12 @@
 package com.accounting.app.notification
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -21,12 +27,22 @@ import kotlinx.coroutines.launch
  * 带记账预填唤起 [MainActivity]。通过 NotificationListenerService 在系统
  * 绑定后被动接收，不申请额外运行时权限。
  *
+ * 保活：连接成功后前台化（FGS，specialUse 类型）防进程被系统省电清理；
+ * 断开时记录日志并 requestRebind 请求系统重绑；开机由 [QuickRecordBootReceiver] 重绑。
+ * 注意:前台化后状态栏常驻一条保活通知（无声音），属前台服务的系统强制要求。
+ *
  * 节点埋点统一携带临时链路 ID（ntf_<sbn.key.hashCode()>_<时间戳>，整个通知全链路复用）与 node=通知监听。
  */
 class QuickRecordNotificationService : NotificationListenerService() {
 
     private companion object {
         const val NODE = "通知监听"
+
+        /** 保活前台通知渠道（IMPORTANCE_LOW：无声音、静默常驻） */
+        const val KEEPALIVE_CHANNEL_ID = "quick_record_keepalive"
+
+        /** 保活前台通知 ID */
+        const val KEEPALIVE_NOTIFICATION_ID = 10086
 
         /** 支付应用包名白名单（命中任一即视为支付通知） */
         val PAYMENT_PACKAGES = setOf(
@@ -176,5 +192,63 @@ class QuickRecordNotificationService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         AppLogger.i("", NODE, "通知监听服务已连接")
+        startKeepAlive()
+    }
+
+    /**
+     * 断开自愈：用户取消通知使用权/系统 unbind 时记录并请求系统重绑，
+     * 进程未死时由系统重新拉起服务，恢复监听。
+     */
+    override fun onListenerDisconnected() {
+        AppLogger.w("", NODE, "通知监听服务已断开，请求重绑")
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            AppLogger.e("", NODE, "stopForeground 异常: ${e.message}", e)
+        }
+        super.onListenerDisconnected()
+        try {
+            NotificationListenerService.requestRebind(
+                ComponentName(this, QuickRecordNotificationService::class.java)
+            )
+        } catch (e: Exception) {
+            AppLogger.e("", NODE, "requestRebind 异常: ${e.message}", e)
+        }
+    }
+
+    /**
+     * 前台化保活：系统绑定成功后启动 FGS，进程获得前台优先级，
+     * 系统省电策略不再轻易清理；状态栏常驻一条静默通知为系统强制要求。
+     */
+    private fun startKeepAlive() {
+        try {
+            val nm = getSystemService(NotificationManager::class.java) ?: return
+            if (nm.getNotificationChannel(KEEPALIVE_CHANNEL_ID) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(
+                        KEEPALIVE_CHANNEL_ID,
+                        "快捷记账保活",
+                        NotificationManager.IMPORTANCE_LOW
+                    )
+                )
+            }
+            val notification = Notification.Builder(this, KEEPALIVE_CHANNEL_ID)
+                .setContentTitle("快捷记账")
+                .setContentText("正在监听付款通知，请勿关闭")
+                .setSmallIcon(com.accounting.app.R.drawable.ic_launcher_foreground)
+                .setOngoing(true)
+                .build()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    KEEPALIVE_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(KEEPALIVE_NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            AppLogger.e("", NODE, "保活前台化失败（不影响通知监听）: ${e.message}", e)
+        }
     }
 }
