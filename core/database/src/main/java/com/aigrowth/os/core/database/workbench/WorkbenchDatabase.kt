@@ -8,7 +8,7 @@ import com.aigrowth.os.core.database.workbench.dao.*
 import com.aigrowth.os.core.database.workbench.entity.*
 
 /**
- * v3.0 工作台数据层独立数据库（workbench.db）。
+ * v4.0 工作台数据层独立数据库（workbench.db）。
  * 与旧 ai_growth_os.db（AppDatabase）及记账模块 accounting.db 相互独立。
  */
 @Database(
@@ -24,7 +24,7 @@ import com.aigrowth.os.core.database.workbench.entity.*
         StatusTrendEntry::class,
         PomodoroState::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class WorkbenchDatabase : RoomDatabase() {
@@ -56,6 +56,14 @@ abstract class WorkbenchDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE plan_items ADD COLUMN completedAt INTEGER")
                 db.execSQL("CREATE TABLE IF NOT EXISTS reading_logs (id TEXT NOT NULL PRIMARY KEY, readingItemId TEXT NOT NULL, date TEXT NOT NULL, amount REAL NOT NULL, createdAt INTEGER NOT NULL, note TEXT)")
+            }
+        }
+
+        /** v3→v4：plan_items 新增可空的 planTime 列，并补齐旧完成记录的 completedAt。 */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE plan_items ADD COLUMN planTime TEXT")
+                db.execSQL("UPDATE plan_items SET completedAt = updatedAt WHERE done = 1 AND completedAt IS NULL")
             }
         }
     }

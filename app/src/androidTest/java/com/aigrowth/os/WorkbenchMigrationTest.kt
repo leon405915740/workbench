@@ -16,15 +16,13 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * 工作台数据库 v1 → v2 迁移自动化测试。
- *
- * v2 相对于 v1 的变更：habits 新增 category / pinnedAt，habit_logs 新增
- * durationMinutes / note / category（均为可空列）。
+ * 工作台数据库 v1 → v4 迁移自动化测试。
  *
  * 覆盖场景：
  * 1. 有数据升级——habits/habit_logs 既有记录完整保留，新列默认 null
  * 2. HabitLogDao.addDuration 原子累加——5+3=8，无记录时返回 0 且不新增行
  * 3. 带类别 / 备注 / 时长的打卡日志读写往返
+ * 4. plan_items 旧记录的 planTime 默认 null，且迁移后可写读新值
  */
 class WorkbenchMigrationTest {
 
@@ -150,14 +148,19 @@ class WorkbenchMigrationTest {
     }
 
     @Test
-    fun migrate2to3_addsCompletedAtAndReadingLogs() = runBlocking {
+    fun migrate1to4_addsPlanColumnsAndReadingLogs() = runBlocking {
         createV1Database(dbName)
         insertV1SampleData(dbName)
 
         val db = openMigratedDb()
         try {
-            // plan_items.completedAt 可写读（v3 新增列，默认 null → 写入时间戳）
+            // v4 为旧完成记录回填 completedAt，planTime 保持 null；新列也可写读。
             val planItemDao = db.planItemDao()
+            val oldPlan = planItemDao.getById("plan-old")
+            assertEquals("旧计划", oldPlan?.title)
+            assertEquals(500L, oldPlan?.completedAt)
+            assertNull(oldPlan?.planTime)
+
             planItemDao.insert(
                 com.aigrowth.os.core.database.workbench.entity.PlanItem(
                     id = "plan-1",
@@ -170,11 +173,14 @@ class WorkbenchMigrationTest {
                     imageUri = null,
                     createdAt = 1000L,
                     updatedAt = 1000L,
-                    completedAt = 500000L
+                    completedAt = 500000L,
+                    planTime = "09:30"
                 )
             )
             val savedPlan = planItemDao.getById("plan-1")
             assertEquals(500000L, savedPlan?.completedAt)
+            assertEquals("09:30", savedPlan?.planTime)
+            assertEquals(listOf("plan-1"), planItemDao.getReminderCandidates().map { it.id })
 
             // reading_logs 表可用（v3 CREATE TABLE）
             val readingLogDao = db.readingLogDao()
@@ -199,13 +205,17 @@ class WorkbenchMigrationTest {
 
     private fun openMigratedDb(): WorkbenchDatabase {
         return Room.databaseBuilder(context, WorkbenchDatabase::class.java, dbName)
-            .addMigrations(WorkbenchDatabase.MIGRATION_1_2, WorkbenchDatabase.MIGRATION_2_3)
+            .addMigrations(
+                WorkbenchDatabase.MIGRATION_1_2,
+                WorkbenchDatabase.MIGRATION_2_3,
+                WorkbenchDatabase.MIGRATION_3_4
+            )
             .build()
     }
 
     /**
      * 用 Room 生成的 v1 实体 schema 直接构造一个 v1 数据库文件。
-     * 除 habits / habit_logs 缺少 v2 新增列外，其余 7 张表与 v2 完全一致，保证迁移后 Room 校验通过。
+     * 直接构造 v1 的 9 张表；后续迁移会补齐 habits / habit_logs / plan_items 的列并创建 reading_logs。
      */
     private fun createV1Database(name: String) {
         val db = SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name), null)
@@ -278,6 +288,11 @@ class WorkbenchMigrationTest {
     private fun insertV1SampleData(name: String) {
         val db = SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name), null)
         try {
+            db.execSQL(
+                "INSERT INTO plan_items (id, title, priority, note, done, pinned, planDate, imageUri, createdAt, updatedAt) " +
+                    "VALUES ('plan-old', '旧计划', 'P1', '', 1, 0, '2026-06-01', NULL, 500, 500)"
+            )
+
             db.execSQL(
                 "INSERT INTO habits (id, title, active, pinned, imageUri, createdAt, updatedAt) " +
                     "VALUES ('habit-1', '早起', 1, 0, NULL, 1000, 1000)"

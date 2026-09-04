@@ -7,12 +7,12 @@ class CategoryEmojiUtilsTest {
 
     @Test
     fun getCategoryEmoji_knownExpenseCategory_returnsCorrectEmoji() {
-        assertEquals("🍜", getCategoryEmoji("餐饮", "expense"))
+        assertEquals("🍜", getCategoryEmoji("餐饮美食", "expense"))
     }
 
     @Test
     fun getCategoryEmoji_knownIncomeCategory_returnsCorrectEmoji() {
-        assertEquals("💰", getCategoryEmoji("工资", "income"))
+        assertEquals("💰", getCategoryEmoji("工资薪水", "income"))
     }
 
     @Test
@@ -22,12 +22,12 @@ class CategoryEmojiUtilsTest {
 
     @Test
     fun getSubcategoryEmoji_knownSubcategory_returnsOwnEmoji() {
-        assertEquals("🍜", getSubcategoryEmoji("餐饮", "expense", null))
+        assertEquals("🍜", getSubcategoryEmoji("餐饮美食", "expense", null))
     }
 
     @Test
     fun getSubcategoryEmoji_unknownSubcategoryWithParent_returnsParentEmoji() {
-        assertEquals("🍜", getSubcategoryEmoji("外卖", "expense", "餐饮"))
+        assertEquals("🍜", getSubcategoryEmoji("外卖", "expense", "餐饮美食"))
     }
 
     @Test

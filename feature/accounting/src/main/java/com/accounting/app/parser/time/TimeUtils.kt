@@ -11,12 +11,12 @@ object TimeUtils {
     private val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
 
     private val timeCategoryMap = mapOf(
-        "早饭" to ("餐饮" to "早餐"), "早餐" to ("餐饮" to "早餐"), "早点" to ("餐饮" to "早餐"), "早上" to ("餐饮" to "早餐"),
-        "午饭" to ("餐饮" to "午餐"), "午餐" to ("餐饮" to "午餐"), "中餐" to ("餐饮" to "午餐"),
-        "中午吃饭" to ("餐饮" to "午餐"), "中午" to ("餐饮" to "午餐"),
-        "下午茶" to ("餐饮" to "饮品"), "下午" to ("餐饮" to "饮品"),
-        "晚饭" to ("餐饮" to "晚餐"), "晚餐" to ("餐饮" to "晚餐"),
-        "晚上" to ("餐饮" to "晚餐"), "夜宵" to ("餐饮" to "晚餐"), "宵夜" to ("餐饮" to "晚餐"),
+        "早饭" to ("餐饮美食" to "早餐"), "早餐" to ("餐饮美食" to "早餐"), "早点" to ("餐饮美食" to "早餐"), "早上" to ("餐饮美食" to "早餐"),
+        "午饭" to ("餐饮美食" to "午餐"), "午餐" to ("餐饮美食" to "午餐"), "中餐" to ("餐饮美食" to "午餐"),
+        "中午吃饭" to ("餐饮美食" to "午餐"), "中午" to ("餐饮美食" to "午餐"),
+        "下午茶" to ("餐饮美食" to "饮品"), "下午" to ("餐饮美食" to "饮品"),
+        "晚饭" to ("餐饮美食" to "晚餐"), "晚餐" to ("餐饮美食" to "晚餐"),
+        "晚上" to ("餐饮美食" to "晚餐"), "夜宵" to ("餐饮美食" to "晚餐"), "宵夜" to ("餐饮美食" to "晚餐"),
     )
 
     fun formatTime(timestamp: Long): String = formatter.format(Date(timestamp))

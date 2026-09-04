@@ -20,6 +20,22 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+private val EXPENSE_KEYWORDS = listOf("付款", "支付成功", "交易成功", "扣款", "支出", "消费")
+private val NON_EXPENSE_KEYWORDS = listOf("收款", "收入", "到账", "退款", "入账", "红包", "赞赏")
+
+internal fun mergeNotificationContent(
+    title: CharSequence?,
+    text: CharSequence?,
+    bigText: CharSequence?,
+    textLines: Array<out CharSequence>?
+): String = (sequenceOf(title, text, bigText) + (textLines?.asSequence() ?: emptySequence()))
+    .mapNotNull { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
+    .distinct()
+    .joinToString(" ")
+
+internal fun hasExpenseDirection(content: String): Boolean =
+    EXPENSE_KEYWORDS.any(content::contains) && NON_EXPENSE_KEYWORDS.none(content::contains)
+
 /**
  * 通知栏监听：付款后自动唤起记账卡片。
  *
@@ -56,12 +72,6 @@ class QuickRecordNotificationService : NotificationListenerService() {
         /** 标题/内容中含以下任一关键词视为支付相关 */
         val PAYMENT_KEYWORDS = listOf("微信支付", "支付宝", "云闪付", "银联", "支付成功", "交易成功", "扣款")
 
-        /** 支出动作关键词：命中任一才确定为「支出」 */
-        val EXPENSE_KEYWORDS = listOf("付款", "支付成功", "交易成功", "扣款", "支出", "消费")
-
-        /** 收入/退款关键词：命中任一则跳过（避免把收入当成支出记） */
-        val NON_EXPENSE_KEYWORDS = listOf("收款", "收入", "到账", "退款", "入账", "红包", "赞赏")
-
         /** 通知去重窗口：同一去重键在此窗口内再次回调直接忽略（不打日志、不透传业务流） */
         const val NOTIFY_DEDUP_WINDOW_MS = 2000L
 
@@ -93,17 +103,22 @@ class QuickRecordNotificationService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val packageName = sbn.packageName
 
-        // 合并标题 + 文本用于匹配
+        // BigText 通知的 EXTRA_TEXT 可能只是截断摘要，所有判定统一使用完整去重内容。
         val extra = sbn.notification.extras
         val title = extra.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extra.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString().orEmpty()
-        val full = "$title $text"
+        val full = mergeNotificationContent(
+            title = title,
+            text = text,
+            bigText = extra.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT),
+            textLines = extra.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)
+        )
 
         // 计算去重键（在生成 requestId 之前做入口去重前置）。
         // 去重键 = pkg | sbn.key | 内容指纹；sbn.key 即 StatusBarNotification.getKey()，
-        // 系统保证同一通知多次回调时 key 稳定唯一。内容指纹=标题+文本摘要(前200字符)，若可提取金额则追加金额，
+        // 系统保证同一通知多次回调时 key 稳定唯一。内容指纹=完整通知内容摘要(前200字符)，若可提取金额则追加金额，
         // 仅全同才判重，避免同 key 不同金额/内容的通知被误杀（防漏单）。
-        val amountForDedup = AmountUtils.extractFenFromAmountText(text)
+        val amountForDedup = AmountUtils.extractFenFromAmountText(full)
         val contentFingerprint = if (amountForDedup != null) {
             full.take(CONTENT_DIGEST_LENGTH) + "_" + amountForDedup
         } else {
@@ -133,16 +148,14 @@ class QuickRecordNotificationService : NotificationListenerService() {
         }
 
         // 2. 判断支出方向：必须是「付款/支付成功」类，避免把收款/退款当支出
-        val hasExpenseAction = EXPENSE_KEYWORDS.any { full.contains(it) }
-        val hasNonExpense = NON_EXPENSE_KEYWORDS.any { full.contains(it) }
-        if (!hasExpenseAction || hasNonExpense) {
-            AppLogger.d(requestId, NODE, "忽略通知: pkg=$packageName, reason=非支出方向, title=$title, text=$text")
+        if (!hasExpenseDirection(full)) {
+            AppLogger.d(requestId, NODE, "忽略通知: pkg=$packageName, reason=非支出方向, content=$full")
             return
         }
 
         // 3. 提取金额
-        val amountFen = AmountUtils.extractFenFromAmountText(text) ?: run {
-            AppLogger.d(requestId, NODE, "忽略通知: pkg=$packageName, reason=未解析到金额, text=$text")
+        val amountFen = AmountUtils.extractFenFromAmountText(full) ?: run {
+            AppLogger.d(requestId, NODE, "忽略通知: pkg=$packageName, reason=未解析到金额, content=$full")
             return
         }
 

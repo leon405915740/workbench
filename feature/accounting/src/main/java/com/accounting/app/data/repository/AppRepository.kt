@@ -17,6 +17,8 @@ import com.accounting.app.parser.intent.MappingMatcher
 import com.accounting.app.plan.execution.BillTransaction
 import com.accounting.app.plan.execution.PlanExecutor
 import com.accounting.app.plan.model.ExecuteResult
+import com.accounting.app.plan.validator.PlanValidator
+import com.accounting.app.plan.validator.ValidationResult
 import com.accounting.app.ai.service.AiPlanner
 import com.accounting.app.ai.service.AccountingAiParser
 import com.accounting.app.plan.builder.PlanBuilder
@@ -689,6 +691,8 @@ class AppRepository(private val context: Context) {
             is RoutingResult.AiSuccess -> routed.plan
             is RoutingResult.Failure -> return listOf(ParseResult.Failure(routed.reason))
         }
+        val validation = PlanValidator.validate(plan, requestId)
+        if (validation is ValidationResult.Failure) return listOf(ParseResult.Failure(validation.reason))
         return plan.items.map { item ->
             ParseResult.Success(
                 type = item.type,

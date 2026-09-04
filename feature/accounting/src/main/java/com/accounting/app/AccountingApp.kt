@@ -31,7 +31,7 @@ class AccountingApp private constructor(context: Context) {
             synchronized(this) {
                 if (initialized) return
                 AppLogger.init(context.applicationContext)
-                CrashHandler.init()
+                CrashHandler.init(context.applicationContext)
                 AppLogger.i("", "应用启动", "AccountingApp init")
                 val db = AppDatabase.getInstance(context.applicationContext)
                 CategoryService.init(db.categoryDao())

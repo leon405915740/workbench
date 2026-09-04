@@ -3,7 +3,6 @@ package com.accounting.app.domain
 import com.accounting.app.ai.model.AiItem
 import com.accounting.app.ai.model.AiOutput
 import com.accounting.app.plan.parser.LocalParser
-import com.accounting.app.plan.model.NormalizedItem
 import org.junit.Test
 
 class LocalParserTest {
@@ -15,7 +14,7 @@ class LocalParserTest {
         ))
         val result = LocalParser.parse(aiOutput, "test-request")
         assert(result.size == 1)
-        assert(result[0].amount == 30.0)
+        assert(result[0].amountFen == 3000L)
         assert(result[0].description == "午餐")
     }
 
@@ -25,16 +24,44 @@ class LocalParserTest {
             AiItem(description = "咖啡", amount = "35.5", time_hint = "今天")
         ))
         val result = LocalParser.parse(aiOutput, "test-request")
-        assert(result[0].amount == 35.5)
+        assert(result[0].amountFen == 3550L)
     }
 
     @Test
-    fun `parse should handle null amount as 0`() {
+    fun `parse should parse Chinese integer amount`() {
+        val aiOutput = AiOutput(listOf(
+            AiItem(description = "午餐", amount = "三十", time_hint = "今天")
+        ))
+        val result = LocalParser.parse(aiOutput, "test-request")
+        assert(result[0].amountFen == 3000L)
+    }
+
+    @Test
+    fun `parse should reject unsupported Chinese fractional shorthand instead of misreading it`() {
+        val aiOutput = AiOutput(listOf(
+            AiItem(description = "咖啡", amount = "三块五", time_hint = "今天"),
+            AiItem(description = "午餐", amount = "一百块二", time_hint = "今天")
+        ))
+        val result = LocalParser.parse(aiOutput, "test-request")
+        assert(result.isEmpty())
+    }
+
+    @Test
+    fun `parse should reject overflow and fail the whole mixed batch`() {
+        val aiOutput = AiOutput(listOf(
+            AiItem(description = "午餐", amount = "30", time_hint = "今天"),
+            AiItem(description = "异常金额", amount = "一百亿亿", time_hint = "今天")
+        ))
+        assert(LocalParser.parse(aiOutput, "test-request").isEmpty())
+    }
+
+    @Test
+    fun `parse should filter missing amount`() {
         val aiOutput = AiOutput(listOf(
             AiItem(description = "未知", amount = null, time_hint = "今天")
         ))
         val result = LocalParser.parse(aiOutput, "test-request")
-        assert(result[0].amount == 0.0)
+        assert(result.isEmpty())
     }
 
     @Test
@@ -45,7 +72,7 @@ class LocalParserTest {
         ))
         val result = LocalParser.parse(aiOutput, "test-request")
         assert(result.size == 2)
-        assert(result.sumOf { it.amount } == 55.0)
+        assert(result.sumOf { it.amountFen } == 5500L)
     }
 
     @Test

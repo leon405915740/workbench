@@ -1,8 +1,6 @@
 package com.accounting.app.log
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import com.accounting.app.BuildConfig
 import java.io.File
@@ -77,9 +75,6 @@ object AppLogger {
 
     /** 日志写入线程池（单线程，保证顺序） */
     private val logExecutor = Executors.newSingleThreadExecutor()
-
-    /** UI 线程 Handler */
-    private val mainHandler = Handler(Looper.getMainLooper())
 
     /**
      * 初始化日志系统，必须在 Application onCreate 中调用。
@@ -259,7 +254,7 @@ object AppLogger {
      * 脱敏规则：
      * - 手机号（1[3-9] 开头 11 位）：138****1234
      * - 银行卡号（16~19 位纯数字）：**** **** **** 1234
-     * - 金额（数字 + 分/元单位）：***
+     * - 金额（数字 + 人民币/分/元单位）：***
      *
      * 该方法由 [log] 内部自动调用，业务代码无需手动调用。
      *
@@ -289,8 +284,8 @@ object AppLogger {
     /** 银行卡号正则：16~19 位纯数字（前后非数字边界防止误匹配） */
     private val BANK_CARD_REGEX = Regex("(?<!\\d)\\d{16,19}(?!\\d)")
 
-    /** 金额正则：整数或两位小数 + 分/元单位 */
-    private val AMOUNT_REGEX = Regex("\\d+(\\.\\d{1,2})?(分|元)")
+    /** 金额正则：整数或两位小数 + 人民币/分/元单位 */
+    private val AMOUNT_REGEX = Regex("\\d+(?:\\.\\d{1,2})?\\s*(?:人民币|分|元)")
 
     // ===================== 内部实现 =====================
 
@@ -331,6 +326,7 @@ object AppLogger {
         extraThrowable: Throwable? = null,
         bypassThrottle: Boolean = false
     ) {
+        if (!::appContext.isInitialized) return
         // ERROR 级别始终写入（即使 Release 包关闭了详细日志），保证崩溃/关键错误可排查
         val alwaysWrite = level == LogLevel.ERROR
         if (!debugLogEnabled && !alwaysWrite) return

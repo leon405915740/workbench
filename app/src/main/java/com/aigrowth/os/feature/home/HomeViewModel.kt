@@ -6,9 +6,11 @@ import com.accounting.app.AccountingApp
 import com.accounting.app.AccountingBridge
 import com.aigrowth.os.core.database.workbench.dao.*
 import com.aigrowth.os.core.database.workbench.entity.*
+import com.aigrowth.os.ui.common.currentDateFlow
 import com.aigrowth.os.ui.common.formatProgress
 import com.aigrowth.os.ui.common.todayString
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -44,6 +46,7 @@ data class OverviewUi(
     val overall: Float get() = (planProgress + habitProgress + readingProgress + exerciseProgress) / 4f
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val planDao: PlanItemDao,
@@ -57,20 +60,23 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val bridge: AccountingBridge = AccountingApp.getBridge()
-    private val today = todayString()
-    private val weekToday = LocalDate.parse(today)
-    private val weekStart = weekToday.minusDays((weekToday.dayOfWeek.value - 1).toLong()).toString()
-    private val weekEnd = weekToday.plusDays((7 - weekToday.dayOfWeek.value).toLong()).toString()
+    private val currentDate = currentDateFlow()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, todayString())
 
     private val plans = planDao.getAll()
     private val habits = habitDao.getAll()
-    private val logs = habitLogDao.getLogsInRange(weekStart, weekEnd)
+    private val logs = currentDate.flatMapLatest { today ->
+        val weekToday = LocalDate.parse(today)
+        val weekStart = weekToday.minusDays((weekToday.dayOfWeek.value - 1).toLong()).toString()
+        val weekEnd = weekToday.plusDays((7 - weekToday.dayOfWeek.value).toLong()).toString()
+        habitLogDao.getLogsInRange(weekStart, weekEnd)
+    }
     private val reading = readingDao.getAll()
     private val exercise = exerciseDao.getAll()
     private val essays = essayDao.getAll()
     private val clippings = clippingDao.getAll()
 
-    val overview: StateFlow<OverviewUi> = combine(plans, habits, logs, reading) { p, h, l, r ->
+    val overview: StateFlow<OverviewUi> = combine(plans, habits, logs, reading, currentDate) { p, h, l, r, today ->
         val activeIds = h.filter { it.active }.map { it.id }.toSet()
         val todayPlans = p.filter { it.planDate == today }
         val priorityOrder = mapOf("P0" to 0, "P1" to 1, "P2" to 2)
@@ -92,8 +98,10 @@ class HomeViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OverviewUi())
 
-    val focus: StateFlow<List<FocusItem>> = combine(plans, habits, reading, exercise, combine(essays, clippings) { e, c -> e to c }) { p, h, r, e, ec ->
-        buildFocus(p, h, r, e, ec.first, ec.second)
+    private val datedPlans = combine(plans, currentDate) { p, today -> p to today }
+
+    val focus: StateFlow<List<FocusItem>> = combine(datedPlans, habits, reading, exercise, combine(essays, clippings) { e, c -> e to c }) { pd, h, r, e, ec ->
+        buildFocus(pd.first, h, r, e, ec.first, ec.second, pd.second)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val statusEntries: StateFlow<List<StatusTrendEntry>> = statusTrendDao.getAll()
@@ -104,6 +112,7 @@ class HomeViewModel @Inject constructor(
 
     fun upsertStatus(score: Int, note: String?) {
         viewModelScope.launch {
+            val today = currentDate.value
             val existing = statusTrendDao.getByDate(today)
             if (existing == null) {
                 statusTrendDao.upsert(StatusTrendEntry(UUID.randomUUID().toString(), today, score, note, System.currentTimeMillis()))
@@ -129,11 +138,12 @@ class HomeViewModel @Inject constructor(
         reading: List<ReadingItem>,
         exercise: List<ExerciseItem>,
         essays: List<Essay>,
-        clippings: List<Clipping>
+        clippings: List<Clipping>,
+        today: String
     ): List<FocusItem> {
         val result = mutableListOf<FocusItem>()
-        plans.filter { it.pinned }.forEach {
-            result += FocusItem("plan:${it.id}", "今日计划", it.title, it.priority)
+        plans.filter { it.pinned && it.planDate == today }.forEach {
+            result += FocusItem("plan:${it.id}", "今日计划", it.title, it.planTime ?: it.priority)
         }
         habits.filter { it.pinned && it.active }.forEach {
             result += FocusItem("habit:${it.id}", "习惯打卡", it.title, "今日打卡")

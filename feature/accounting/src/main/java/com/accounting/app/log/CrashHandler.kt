@@ -1,7 +1,9 @@
 package com.accounting.app.log
 
+import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.os.Build
-import com.accounting.app.BuildConfig
+import androidx.core.content.pm.PackageInfoCompat
 
 /**
  * 全局未捕获异常处理器。
@@ -18,13 +20,13 @@ object CrashHandler {
     @Volatile
     private var installed = false
 
-    fun init() {
+    fun init(context: Context) {
         if (installed) return
         installed = true
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
-                val env = collectEnv(thread)
+                val env = collectEnv(context, thread)
                 AppLogger.logCrash(throwable, env)
             } catch (e: Throwable) {
                 // 记录崩溃本身失败时不应影响后续流程
@@ -34,13 +36,19 @@ object CrashHandler {
         }
     }
 
-    private fun collectEnv(thread: Thread): String {
+    private fun collectEnv(context: Context, thread: Thread): String {
+        val packageInfo = runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        }.getOrNull()
+        val versionName = packageInfo?.versionName ?: "unknown"
+        val versionCode = packageInfo?.let(PackageInfoCompat::getLongVersionCode) ?: -1L
+        val debug = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         return buildString {
             append("线程: ${thread.name}")
             append(" | 机型: ${Build.MANUFACTURER} ${Build.MODEL}")
             append(" | Android: ${Build.VERSION.SDK_INT}(${Build.VERSION.RELEASE})")
-            append(" | App: v${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})")
-            append(" | 构建类型: ${if (BuildConfig.DEBUG) "debug" else "release"}")
+            append(" | App: v$versionName($versionCode)")
+            append(" | 构建类型: ${if (debug) "debug" else "release"}")
         }
     }
 }

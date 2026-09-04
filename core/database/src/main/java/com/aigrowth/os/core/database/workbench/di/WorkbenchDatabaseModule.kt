@@ -24,7 +24,11 @@ object WorkbenchDatabaseModule {
             context,
             WorkbenchDatabase::class.java,
             "workbench.db"
-        ).addMigrations(WorkbenchDatabase.MIGRATION_1_2, WorkbenchDatabase.MIGRATION_2_3)
+        ).addMigrations(
+            WorkbenchDatabase.MIGRATION_1_2,
+            WorkbenchDatabase.MIGRATION_2_3,
+            WorkbenchDatabase.MIGRATION_3_4
+        )
             .build()
     }
 

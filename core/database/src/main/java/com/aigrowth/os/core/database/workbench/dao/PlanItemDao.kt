@@ -18,6 +18,9 @@ interface PlanItemDao {
     @Query("SELECT * FROM plan_items WHERE id = :id")
     suspend fun getById(id: String): PlanItem?
 
+    @Query("SELECT * FROM plan_items WHERE planTime IS NOT NULL")
+    suspend fun getReminderCandidates(): List<PlanItem>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: PlanItem)
 

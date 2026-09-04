@@ -66,16 +66,16 @@ class AIClient @Inject constructor() {
                 .post(requestBody)
                 .build()
 
-            val response = client.newCall(httpRequest).execute()
+            client.newCall(httpRequest).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                        ?: return@withContext Result.failure(Exception("Empty response body"))
 
-            if (response.isSuccessful) {
-                val responseBody = response.body?.string()
-                    ?: return@withContext Result.failure(Exception("Empty response body"))
-
-                val aiResponse = parseResponse(responseBody)
-                Result.success(aiResponse)
-            } else {
-                Result.failure(Exception("API call failed: ${response.code} ${response.message}"))
+                    val aiResponse = parseResponse(responseBody)
+                    Result.success(aiResponse)
+                } else {
+                    Result.failure(Exception("API call failed: ${response.code} ${response.message}"))
+                }
             }
         } catch (e: Exception) {
             Result.failure(Exception("API call error: ${e.message}", e))

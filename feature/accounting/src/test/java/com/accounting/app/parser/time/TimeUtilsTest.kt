@@ -6,6 +6,11 @@ import java.util.Calendar
 class TimeUtilsTest {
 
     @Test
+    fun `matchTimeCategory should use current category name`() {
+        assert(TimeUtils.matchTimeCategory("午饭20") == ("餐饮美食" to "午餐"))
+    }
+
+    @Test
     fun `extractTimeRange should parse this week`() {
         val (start, end) = TimeUtils.extractTimeRange("本周消费多少")
         val cal = Calendar.getInstance()

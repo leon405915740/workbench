@@ -15,6 +15,12 @@ object PlanValidator {
         if (plan.items.isEmpty()) {
             return ValidationResult.Failure("计划为空")
         }
+        val calculatedTotal = runCatching {
+            plan.items.fold(0L) { total, item -> Math.addExact(total, item.amount) }
+        }.getOrElse { return ValidationResult.Failure("计划总金额溢出") }
+        if (calculatedTotal != plan.totalAmount) {
+            return ValidationResult.Failure("计划总金额与明细不一致")
+        }
 
         for ((index, item) in plan.items.withIndex()) {
             val billIndex = index + 1

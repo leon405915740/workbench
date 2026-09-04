@@ -39,7 +39,7 @@ class WorkbenchDatabaseInitializer @Inject constructor(
         listOf(
             PlanItem(UUID.randomUUID().toString(), "确定今日最重要的一件事", "P0", "先做最重要的事", false, false, today, null, now, now),
             PlanItem(UUID.randomUUID().toString(), "整理桌面并给房间通风", "P1", "", false, false, today, null, now, now),
-            PlanItem(UUID.randomUUID().toString(), "晚饭后整理今日小票并记账", "P2", "", true, false, today, null, now, now)
+            PlanItem(UUID.randomUUID().toString(), "晚饭后整理今日小票并记账", "P2", "", true, false, today, null, now, now, now)
         ).forEach { database.planItemDao().insert(it) }
 
         listOf("喝够 8 杯水", "23:30 前睡觉", "散步 10 分钟").forEach { title ->

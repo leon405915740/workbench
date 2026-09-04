@@ -1,5 +1,6 @@
 package com.aigrowth.os.feature.plan
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +28,8 @@ import com.aigrowth.os.ui.common.*
 import com.aigrowth.os.ui.theme.*
 import com.aigrowth.os.util.WorkbenchImageStore
 import java.time.LocalDate
+import java.time.LocalTime
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +42,7 @@ fun PlanScreen(vm: PlanViewModel = hiltViewModel()) {
     var showEditor by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PlanItem?>(null) }
     var archivedExpanded by remember { mutableStateOf(false) }
+    var showExactAlarmAccessDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Box(Modifier.fillMaxSize()) {
@@ -108,14 +112,48 @@ fun PlanScreen(vm: PlanViewModel = hiltViewModel()) {
             PlanEditorSheet(
                 initial = editorTarget,
                 onDismiss = { showEditor = false },
-                onSave = { title, priority, note, date, imageUri ->
+                onSave = { title, priority, note, date, planTime, imageUri ->
                     val target = editorTarget
                     if (target == null) {
-                        if (title.isNotBlank()) vm.add(title, priority, note, date, imageUri)
+                        vm.add(title, priority, note, date, planTime, imageUri)
                     } else {
-                        vm.update(target.copy(title = title, priority = priority, note = note, planDate = date, imageUri = imageUri))
+                        vm.update(
+                            target.copy(
+                                title = title,
+                                priority = priority,
+                                note = note,
+                                planDate = date,
+                                planTime = planTime,
+                                imageUri = imageUri
+                            )
+                        )
                     }
                     showEditor = false
+                    if (planTime != null &&
+                        PlanReminders.hasFutureTrigger(date, planTime) &&
+                        !PlanReminders.canScheduleExact(context)
+                    ) {
+                        showExactAlarmAccessDialog = true
+                    }
+                }
+            )
+        }
+
+        if (showExactAlarmAccessDialog) {
+            AlertDialog(
+                onDismissRequest = { showExactAlarmAccessDialog = false },
+                title = { Text("允许准时提醒") },
+                text = { Text("请允许工作台设置“闹钟和提醒”。未授权时计划仍会保存，但系统可能延迟通知。") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showExactAlarmAccessDialog = false
+                            PlanReminders.requestExactAlarmAccess(context)
+                        }
+                    ) { Text("去授权") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExactAlarmAccessDialog = false }) { Text("稍后") }
                 }
             )
         }
@@ -230,6 +268,15 @@ private fun PlanCard(
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         PriorityBadge(item.priority)
                         Text(formatDate(item.planDate), style = MaterialTheme.typography.labelSmall, color = InkSecondary)
+                        item.planTime?.let { planTime ->
+                            Icon(
+                                Icons.Default.Schedule,
+                                contentDescription = "提醒时间",
+                                tint = ModuleGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(planTime, style = MaterialTheme.typography.labelSmall, color = ModuleGreen)
+                        }
                     }
                     if (item.imageUri != null) {
                         Spacer(Modifier.height(8.dp))
@@ -303,13 +350,23 @@ private fun MiniAction(onClick: () -> Unit, content: @Composable () -> Unit) {
 private fun PlanEditorSheet(
     initial: PlanItem?,
     onDismiss: () -> Unit,
-    onSave: (title: String, priority: String, note: String, date: String, imageUri: String?) -> Unit
+    onSave: (
+        title: String,
+        priority: String,
+        note: String,
+        date: String,
+        planTime: String?,
+        imageUri: String?
+    ) -> Unit
 ) {
     var title by remember { mutableStateOf(initial?.title ?: "") }
     var priority by remember { mutableStateOf(initial?.priority ?: "P1") }
     var note by remember { mutableStateOf(initial?.note ?: "") }
     var date by remember { mutableStateOf(initial?.planDate ?: LocalDate.now().toString()) }
+    var planTime by remember { mutableStateOf(initial?.planTime) }
     val attachment = rememberImageAttachment(initial?.imageUri)
+    val context = LocalContext.current
+    val validDate = remember(date) { runCatching { LocalDate.parse(date.trim()) }.isSuccess }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -336,7 +393,53 @@ private fun PlanEditorSheet(
                 onValueChange = { date = it },
                 label = { Text("计划日期 (yyyy-MM-dd)") },
                 singleLine = true,
+                isError = !validDate,
+                supportingText = {
+                    if (!validDate) Text("请输入有效日期，例如 2026-09-02")
+                },
                 modifier = Modifier.fillMaxWidth()
+            )
+            Text("计划时间", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        val initialTime = planTime
+                            ?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
+                            ?: LocalTime.now()
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute ->
+                                planTime = String.format(Locale.US, "%02d:%02d", hour, minute)
+                            },
+                            initialTime.hour,
+                            initialTime.minute,
+                            true
+                        ).show()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Schedule, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(planTime ?: "选择时间")
+                }
+                if (planTime != null) {
+                    TextButton(onClick = { planTime = null }) { Text("清除") }
+                }
+            }
+            val selectedTime = planTime
+            Text(
+                when {
+                    selectedTime == null -> "未设置时间，不会发送提醒"
+                    !validDate -> "请先填写有效日期"
+                    PlanReminders.hasFutureTrigger(date.trim(), selectedTime) -> "将在计划日期 $selectedTime 到点提醒"
+                    else -> "所选时间已过，不会发送提醒"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             OutlinedTextField(
                 value = note,
@@ -350,8 +453,8 @@ private fun PlanEditorSheet(
                 onRemove = attachment::onRemove
             )
             Button(
-                onClick = { onSave(title, priority, note, date.ifBlank { LocalDate.now().toString() }, attachment.resolve()) },
-                enabled = title.isNotBlank(),
+                onClick = { onSave(title.trim(), priority, note, date.trim(), planTime, attachment.resolve()) },
+                enabled = title.isNotBlank() && validDate,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("保存")

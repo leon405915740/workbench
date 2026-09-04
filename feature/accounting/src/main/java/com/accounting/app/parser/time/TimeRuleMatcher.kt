@@ -11,16 +11,16 @@ object TimeRuleMatcher {
     fun match(request: MatchRequest, requestId: String, billIndex: Int? = null): MatchResult? {
         val category = request.hint ?: return null
 
-        if (category != "餐饮") return null
+        if (category != "餐饮" && category != "餐饮美食") return null
 
         val timeSub = TimeUtils.matchTimeCategory(request.description)?.second
         if (timeSub != null) {
-            val message = "待匹配：${request.description}，来源：time_rule，分类：餐饮-${timeSub}，时段规则命中，最终分类：餐饮-${timeSub}"
+            val message = "待匹配：${request.description}，来源：time_rule，分类：餐饮美食-${timeSub}，时段规则命中，最终分类：餐饮美食-${timeSub}"
             if (billIndex != null) AppLogger.d(requestId, "分类匹配", message, billIndex)
             else AppLogger.d(requestId, "分类匹配", message)
             return MatchResult(
                 type = "expense",
-                category = "餐饮",
+                category = "餐饮美食",
                 subCategory = timeSub,
                 source = MatchSource.TIME_RULE,
                 confidence = 0.85f
@@ -36,12 +36,12 @@ object TimeRuleMatcher {
             else -> "夜宵"
         }
 
-        val message = "待匹配：${request.description}，来源：time_rule，分类：餐饮-${fallback}，时段兜底，最终分类：餐饮-${fallback}"
+        val message = "待匹配：${request.description}，来源：time_rule，分类：餐饮美食-${fallback}，时段兜底，最终分类：餐饮美食-${fallback}"
         if (billIndex != null) AppLogger.d(requestId, "分类匹配", message, billIndex)
         else AppLogger.d(requestId, "分类匹配", message)
         return MatchResult(
             type = "expense",
-            category = "餐饮",
+            category = "餐饮美食",
             subCategory = fallback,
             source = MatchSource.TIME_RULE,
             confidence = 0.7f

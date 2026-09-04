@@ -15,7 +15,6 @@ import com.accounting.app.plan.builder.PlanBuilder
 import com.accounting.app.util.AmountUtils
 import com.accounting.app.log.AppLogger
 import com.accounting.app.parser.time.TimeUtils
-import java.math.BigDecimal
 import java.util.Date
 
 class IntentRouter(
@@ -119,9 +118,7 @@ class IntentRouter(
     }
 
     private fun extractAmountFromInput(input: String): Long {
-        val amountMatch = Regex("""\d+(\.\d+)?""").find(input)
-        val amount = amountMatch?.value?.toDoubleOrNull() ?: 0.0
-        return BigDecimal(amount.toString()).movePointRight(2).toLong()
+        return AmountUtils.extractLooseAmount(input) ?: 0L
     }
 
     private suspend fun buildPlanFromRegex(
@@ -161,7 +158,9 @@ class IntentRouter(
 
         if (items.isEmpty()) return null
 
-        val totalAmount = items.sumOf { it.amount }
+        val totalAmount = runCatching {
+            items.fold(0L) { total, item -> Math.addExact(total, item.amount) }
+        }.getOrNull() ?: return null
         return BillExecutePlan(
             requestId = requestId,
             totalCount = items.size,
@@ -172,9 +171,7 @@ class IntentRouter(
     }
 
     private suspend fun buildFallbackPlan(rawInput: String, requestId: String): BillExecutePlan? {
-        val amountMatch = Regex("""\d+(\.\d+)?""").find(rawInput)
-        val amount = amountMatch?.value?.toDoubleOrNull() ?: return null
-        val amountFen = BigDecimal(amount.toString()).movePointRight(2).toLong()
+        val amountFen = AmountUtils.extractLooseAmount(rawInput) ?: return null
 
         val description = AmountUtils.cleanSegment(rawInput)
         val matchRequest = MatchRequest(

@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
@@ -15,17 +13,6 @@ android {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // 从 local.properties 读取 DeepSeek API Key，编译期注入 BuildConfig
-        val localProperties = Properties().apply {
-            val file = rootProject.file("local.properties")
-            if (file.exists()) {
-                file.inputStream().use { load(it) }
-            }
-        }
-        val deepseekApiKey = localProperties.getProperty("DEEPSEEK_API_KEY") ?: "your_api_key_here"
-        buildConfigField("String", "DEEPSEEK_API_KEY", "\"$deepseekApiKey\"")
-        buildConfigField("int", "VERSION_CODE", "1")
-        buildConfigField("String", "VERSION_NAME", "\"1.0\"")
     }
 
     buildTypes {

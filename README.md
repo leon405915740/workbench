@@ -1,231 +1,185 @@
-# AI成长操作系统 (AI Growth OS)
+# 工作台
 
-> 让AI成为你的私人学习教练，实现10倍速成长
+一个本地优先的 Android 个人管理应用，把今日计划、习惯、运动、阅读、记账、随笔、剪报与专注工具集中在同一个工作台中。
 
-## 项目简介
+> 当前处于开发阶段，仓库提供源码构建的 Debug 版本，不应视为正式发行版。
 
-AI成长操作系统是一款AI Native的Android应用，通过AI学习教练、成长追踪、内容创作等功能，帮助用户实现全方位成长。核心创新是将AI从简单问答工具升级为具备记忆能力的私人导师。
+## 功能
 
-### 核心功能
+- **首页概览**：聚合今日计划、习惯、阅读、运动、随笔与剪报，并展示近期趋势和快捷入口。
+- **今日计划**：新增、编辑、搜索、置顶、完成与归档；支持日期、P0/P1/P2 优先级、图片、可编辑时间和本地到点提醒。
+- **习惯与运动**：习惯管理、每日打卡、补录、连续与月度统计，以及独立运动计时和时长记录。
+- **阅读**：书目、目标进度、增量日志、撤销、搜索、置顶、图片和完成归档。
+- **记账**：收入/支出录入、编辑删除、附件、搜索、分类统计、七日趋势、CSV 导出和分类记忆。
+- **自然语言记账**：本地规则优先，可选使用 DeepSeek 或 OpenCode Go 完成复杂解析、分类和统计问答。
+- **付款通知快捷记账**：读取系统实际投递的支付通知，识别 BigText 等完整正文、提取金额并打开预填记账卡片。
+- **随笔与剪报**：支持正文、标签、日期、图片、搜索、置顶，以及情绪、类型、来源或阅读状态。
+- **专注与状态**：25/5 分钟番茄钟、结束通知、进程恢复，以及每日状态评分和七日趋势。
+- **个人中心与设置**：头像、昵称、AI 服务配置、连接测试、快捷记账开关、系统权限入口、分类映射和数据导出。
 
-1. **AI学习教练**
-   - 学习目标管理
-   - AI生成学习路径
-   - 每日学习任务
-   - 费曼学习法训练
+## 当前状态
 
-2. **成长追踪**
-   - 成长数据仪表盘
-   - 知识卡片复习
-   - 成长值量化
+- applicationId：`com.aigrowth.os`
+- 当前源码版本：`1.10.1`，versionCode `15`
+- 最低系统：Android 8.0 / API 26
+- targetSdk / compileSdk：34
+- 最近一次全仓验证：49/49 JVM 测试通过，Lint 0 error，AndroidTest 编译和 Debug 构建通过
+- Room 迁移测试：SM-S9110 / Android 15 模拟器上 4/4 通过
 
-3. **AI记忆**
-   - 对话记忆
-   - 知识持久化
+当前构建产物、设备验证和未完成事项以 [工作交接文档](./工作交接文档.md) 为准。
 
-4. **自媒体工作台**
-   - AI内容创意生成
-   - 爆款内容分析
-   - 内容脚本生成
-   - 成长报告生成
-   - AI资源推荐
-   - 7天学习计划
+## 技术栈
 
-## 技术架构
+- Kotlin 1.9.22、JDK 17
+- Gradle Wrapper 8.4、Android Gradle Plugin 8.2.2
+- Jetpack Compose、Material 3、Navigation Compose
+- Hilt 2.48
+- Room 2.6.1
+- Kotlin Coroutines / Flow
+- DataStore Preferences、SharedPreferences
+- Retrofit 2、OkHttp 4、Gson
+- JUnit 4、AndroidX Test、Espresso、Compose UI Test
 
-```
-AI-Growth-OS/
-├── app/                           # 应用模块
-│   └── src/main/java/com/aigrowth/os/
-│       ├── AIGrowthOSApp.kt       # 导航和路由
-│       ├── AIGrowthOSApplication.kt # Application初始化
-│       ├── MainActivity.kt        # 主Activity
-│       └── ui/
-│           ├── theme/             # 主题
-│           ├── onboarding/        # 首次启动引导
-│           ├── splash/            # 启动页
-│           └── common/            # 通用组件
-├── core/
-│   ├── ai-engine/                 # AI引擎模块
-│   │   └── src/main/java/com/aigrowth/os/core/aiengine/
-│   │       ├── AIClient.kt        # AI API客户端
-│   │       ├── PromptManager.kt   # Prompt管理
-│   │       ├── CreatorAgent.kt    # 创作Agent
-│   │       ├── LearningAgent.kt   # 学习Agent
-│   │       └── ApiKeyService.kt   # API Key服务
-│   └── database/                  # 数据库模块
-│       └── src/main/java/com/aigrowth/os/core/database/
-│           ├── AppDatabase.kt     # Room数据库
-│           ├── DatabaseInitializer.kt # 数据库初始化
-│           ├── entity/            # 数据实体
-│           └── dao/               # 数据访问对象
-└── feature/
-    ├── learning/                  # 学习模块
-    │   └── src/main/java/com/aigrowth/os/feature/learning/
-    │       ├── domain/            # 业务逻辑
-    │       └── presentation/      # UI层
-    ├── creator/                   # 创作模块
-    │   └── src/main/java/com/aigrowth/os/feature/creator/
-    │       ├── domain/
-    │       └── presentation/
-    └── growth/                    # 成长模块
+## 项目结构
+
+```text
+app/
+  Android 宿主、导航、首页和当前工作台功能
+
+core/
+  database/    工作台 Room 数据层与迁移
+  design/      Compose 设计组件
+  network/     网络配置
+  ai-engine/   AI 客户端及遗留学习/创作 Agent
+
+feature/
+  accounting/  当前记账域、AI 解析、统计、分类记忆和通知快捷记账
+  learning/    遗留学习模块，当前主导航未开放
+  creator/     遗留创作模块，当前主导航未开放
+  growth/      遗留占位模块
+
+docs/
+  任务、审查和项目说明
 ```
 
-## 数据模型
+Gradle 模块清单见 [settings.gradle.kts](./settings.gradle.kts)。
 
-- **Goal**: 学习目标
-- **LearningPath**: 学习路径
-- **LearningLevel**: 学习阶段
-- **DailyTask**: 每日任务
-- **KnowledgeCard**: 知识卡片
-- **AIMemory**: AI记忆
-- **AIConversation**: 对话记录
-- **FeynmanSession**: 费曼学习会话
-- **GrowthRecord**: 成长记录
-- **Content**: 内容创作
+## 环境要求
 
-## 开发模式
-
-本项目采用 **AI Native开发模式**：
-
-1. **AI快速全量搭骨架**：使用AI辅助快速生成代码框架
-2. **核心闭环优先跑通**：优先实现核心功能流程
-3. **持续增强**：迭代优化和功能扩展
-
-### Sprint开发周期
-
-| Sprint | 目标 | 状态 |
-|--------|------|------|
-| Sprint 1 | 数据层设计 | ✅ 完成 |
-| Sprint 2 | AI引擎开发 | ✅ 完成 |
-| Sprint 3 | 学习模块开发 | ✅ 完成 |
-| Sprint 4 | 自媒体工作台 | ✅ 完成 |
-| Sprint 5 | 整合测试和发布准备 | ✅ 完成 |
-
-## 构建运行
-
-### 环境要求
-
-- Android Studio Hedgehog (2023.1.1) 或更高版本
+- Android Studio Hedgehog 或更新版本
 - JDK 17
 - Android SDK 34
-- Kotlin 1.9.23
+- 可选：ADB 设备或模拟器
 
-### 构建步骤
+当前 `gradle.properties` 含维护者 Windows 环境使用的 JDK 与 AAPT2 路径覆盖。其他机器首次构建前，应删除、替换或通过命令行覆盖 `org.gradle.java.home` 和 `android.aapt2FromMavenOverride`，不要把个人 SDK 路径或凭据提交到仓库。
+
+## 获取与构建
 
 ```bash
-# 克隆项目
-git clone [project-url]
-
-# 进入项目目录
-cd AI-Growth-OS
-
-# 构建Debug版本
-./gradlew assembleDebug
-
-# 或在Android Studio中点击Run按钮
+git clone https://github.com/leon405915740/workbench.git
+cd workbench
 ```
 
-### API Key配置
+Windows PowerShell：
 
-首次启动应用时，需要配置AI API Key：
+```powershell
+.\gradlew.bat :app:assembleDebug
+```
 
-1. 点击"下一步"进入配置页面
-2. 输入Claude或OpenAI的API Key
-3. 选择AI模型（Claude/GPT）
-4. 点击"保存设置"
+macOS / Linux：
 
-**获取API Key：**
-- Claude: https://console.anthropic.com/
-- OpenAI: https://platform.openai.com/
+```bash
+./gradlew :app:assembleDebug
+```
 
-## 核心AI能力
+APK 输出路径：
 
-### CreatorAgent
+```text
+app/build/outputs/apk/debug/工作台-{versionName}.apk
+```
 
-自媒体创作AI代理，提供以下能力：
+保留设备现有应用数据进行覆盖安装：
 
-- `generateContentIdea()`: 生成内容创意
-- `generateGrowthReport()`: 生成成长报告
-- `analyzeViralContent()`: 爆款内容分析
-- `generateContentScript()`: 生成内容脚本
-- `recommendResources()`: 推荐学习资源
-- `generateWeeklyPlan()`: 生成7天学习计划
+```bash
+adb install -r "app/build/outputs/apk/debug/工作台-{versionName}.apk"
+```
 
-### LearningAgent
+## 测试与静态检查
 
-学习AI代理，提供以下能力：
+完整 Debug 验证：
 
-- 学习路径规划
-- 每日任务生成
-- 知识卡片生成
-- 费曼学习指导
+```powershell
+.\gradlew.bat lintDebug testDebugUnitTest :app:compileDebugAndroidTestKotlin assembleDebug --no-daemon
+```
 
-## 特色功能
+单独执行：
 
-### 1. 费曼学习法训练
+```powershell
+.\gradlew.bat testDebugUnitTest
+.\gradlew.bat lintDebug
+.\gradlew.bat :app:compileDebugAndroidTestKotlin
+```
 
-通过AI扮演初学者，用户尝试教授知识点，AI提问和反馈，实现深度学习。
+设备测试仅应在专用、可清空的模拟器上运行：
 
-### 2. AI记忆系统
+```powershell
+.\gradlew.bat connectedDebugAndroidTest
+```
 
-自动记录学习对话，形成知识库，支持语义检索。
+> `connectedDebugAndroidTest` 的安装/清理流程可能卸载目标 Debug 包并清除其本地数据。不要在保存真实账单或其他重要数据的设备上运行；先备份或使用一次性模拟器。
 
-### 3. 成长值量化
+## 可选 AI 配置
 
-每天生成成长报告，量化学习成果，激励持续学习。
+不配置 API Key 也可以使用计划、习惯、阅读、手动记账等本地功能。
 
-### 4. 自媒体创作工作台
+需要自然语言记账或统计问答时，在应用的“个人中心 → 服务配置”中：
 
-将学习成果转化为自媒体内容，实现知识变现。
+1. 选择 DeepSeek 或 OpenCode Go。
+2. 填写自己的 API Key 和模型名。
+3. 先执行连接测试，再保存配置。
 
-## 项目成果
+输入给 AI 的内容会发送到所选第三方服务。不要把 API Key 写入源码、README、Git 提交或问题反馈。
 
-- **代码文件数**: 40+
-- **功能页面数**: 20+
-- **数据实体数**: 10
-- **AI Agent数**: 2
-- **Prompt模板数**: 10+
+## 权限与系统行为
 
-## 工作台整合更新（记账 App 设计语言版）
+| 能力 | 所需权限或系统设置 |
+| --- | --- |
+| AI 服务 | 网络权限 |
+| 今日计划、番茄钟通知 | Android 13+ 通知权限 |
+| 计划准点提醒 | Android 12+“闹钟和提醒”特殊访问；未授权时降级为非精确提醒 |
+| 重启后恢复提醒 | 开机广播 |
+| 付款通知快捷记账 | 系统“通知使用权” |
+| 后台打开预填记账卡片 | 悬浮窗权限 |
+| 通知监听保活 | 系统要求的前台服务及静默常驻通知 |
 
-### 本次变更
+所有可选权限都应由用户在系统设置中主动授予。
 
-- **产品名**: App 更名为「工作台」，启动图标换用记账 App 的金色标识
-- **UI 设计体系**: 全面沿用记账 App 的莫兰迪雾蓝紫设计语言（品牌色 #6366A0、WCAG AA 对比度规范），关闭 Material You 动态取色与深色模式，全局浅色莫兰迪配色
-- **新增模块 core:design**: 统一设计组件（MorandiCard 圆角卡片+品牌柔阴影、GradientSummaryCard 渐变总览卡、CapsuleTabGroup 胶囊切换组、GradientButton 渐变按钮、GradientProgressBar 渐变进度条、MorandiEmptyState 空状态等）
-- **停用示例数据预填充**: 首次启动不再写入演示数据，以真实用户数据为准
-- **第一批功能（本地闭环）**: 目标管理 + 每日任务 + 成长记录仪表盘已打通
-  - 目标：创建 / 编辑 / 完成 / 删除
-  - 每日任务：支持**手动添加任务**（不依赖 AI）；AI 生成任务需在设置页配置 API Key
-  - 成长记录：完成任务后**自动写入今日成长记录**，首页仪表盘实时刷新（无需手动点击刷新）
-  - 首页入口：今日学习计划卡片右上角「今日任务」直达每日任务页
-  - 首页 / 目标 / 每日任务 / 成长 / 新建目标等页面均已换为记账设计风格
+## 数据与安全
 
-### 构建
+- 工作台数据保存在本地 `workbench.db`，记账数据保存在本地 `accounting.db`。
+- 数据库升级使用显式 Room Migration，不使用清库式迁移。
+- 当前没有项目级云同步；卸载应用会删除未被系统备份的本地数据。
+- API Key 保存在本地 DataStore，但当前只是 Base64 编码混淆，不等同于 Android Keystore 加密。
+- Debug 日志会遮盖常见手机号、银行卡号和带货币单位的金额；分享日志前仍应人工检查商户、备注等业务内容。
+- Release 构建尚未启用混淆，也没有公开可验证的正式签名发布流程。
 
-\`\`\`bash
-gradlew.bat :app:assembleDebug
-# 产物：app/build/outputs/apk/debug/app-debug.apk
-\`\`\`
+## 已知限制
 
-## 后续规划
+- 付款快捷记账只能处理真正进入 Android 系统通知栏的内容；应用内消息或服务号消息无法被监听器捕获。
+- 精确提醒会受到系统授权、Doze 和厂商省电策略影响。
+- 当前没有记账数据导入或完整应用数据导入流程。
+- `feature:learning`、`feature:creator` 和 `feature:growth` 尚未接入当前主导航。
+- GitHub 当前没有 Release；普通 Git push 不会上传被忽略的 APK 文件。
 
-1. **云端同步**: 支持多设备数据同步
-2. **社交功能**: 学习伙伴、打卡分享
-3. **更多AI模型**: 支持本地大模型
-4. **Web版**: 提供Web端访问
-5. **数据分析**: 深度学习分析报告
+## 项目文档
 
-## 开源协议
+- [当前工作交接与验收状态](./工作交接文档.md)
+- [今日计划提醒与全仓审查任务](./docs/agent-tasks/today-plan-reminder-and-code-audit.md)
 
-MIT License
+## 反馈
 
-## 联系方式
+请通过 [GitHub Issues](https://github.com/leon405915740/workbench/issues) 提交可复现的问题，并附上 Android 版本、操作步骤及已脱敏日志。
 
-- 项目地址: [GitHub URL]
-- 问题反馈: [Issues URL]
+## 许可证
 
----
-
-**让AI成为你的成长伙伴，一起实现10倍速成长！** 🚀
+本仓库目前没有 `LICENSE` 文件，也尚未声明开源许可证。仓库公开可见不代表自动获得复制、修改或再分发授权。

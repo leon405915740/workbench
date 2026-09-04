@@ -25,10 +25,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 fun todayString(): String = LocalDate.now().toString()
+
+fun currentDateFlow(): Flow<String> = flow {
+    while (true) {
+        emit(todayString())
+        delay(60_000L)
+    }
+}.distinctUntilChanged()
 
 private val displayFormatter = DateTimeFormatter.ofPattern("M月d日")
 

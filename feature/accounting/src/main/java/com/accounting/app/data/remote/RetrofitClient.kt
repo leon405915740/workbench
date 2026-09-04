@@ -1,5 +1,6 @@
 package com.accounting.app.data.remote
 
+import com.accounting.app.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -36,17 +37,7 @@ object RetrofitClient {
     fun create(provider: String = AiProviders.DEEPSEEK): DeepSeekApi {
         return Retrofit.Builder()
             .baseUrl(baseUrlFor(provider))
-            .client(
-                OkHttpClient.Builder()
-                    .addInterceptor(
-                        HttpLoggingInterceptor().apply {
-                            level = HttpLoggingInterceptor.Level.BODY
-                        }
-                    )
-                    .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(60, TimeUnit.SECONDS)
-                    .build()
-            )
+            .client(httpClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(DeepSeekApi::class.java)
@@ -55,15 +46,24 @@ object RetrofitClient {
     fun createPlannerApi(provider: String = AiProviders.DEEPSEEK): PlannerDeepSeekApi {
         return Retrofit.Builder()
             .baseUrl(baseUrlFor(provider))
-            .client(
-                OkHttpClient.Builder()
-                    .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
-                    .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(60, TimeUnit.SECONDS)
-                    .build()
-            )
+            .client(httpClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(PlannerDeepSeekApi::class.java)
+    }
+
+    private fun httpClient(): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(
+                HttpLoggingInterceptor().apply {
+                    redactHeader("Authorization")
+                    level = HttpLoggingInterceptor.Level.BASIC
+                }
+            )
+        }
+        return builder.build()
     }
 }

@@ -32,7 +32,7 @@ object PlanMerger {
             BillPlanItem(
                 action = PlanAction.ADD,
                 type = matchResult.type,
-                amount = (normalized.amount * 100).toLong(),
+                amount = normalized.amountFen,
                 category = matchResult.category,
                 subCategory = matchResult.subCategory,
                 merchant = normalized.description,
@@ -44,11 +44,11 @@ object PlanMerger {
             )
         }
 
-        val totalAmount = finalItems.sumOf { it.amount }
+        val totalAmount = finalItems.fold(0L) { total, item -> Math.addExact(total, item.amount) }
         val planType = detectPlanType(finalItems)
 
         val summary = PlanSummary(
-            totalAmount = finalItems.sumOf { it.amount.toDouble() / 100 },
+            totalAmount = totalAmount.toDouble() / 100,
             count = finalItems.size,
             firstCategoryHint = finalItems.firstOrNull()?.category
         )

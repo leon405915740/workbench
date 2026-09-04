@@ -4,7 +4,7 @@ import java.util.Date
 
 data class NormalizedItem(
     val description: String,
-    val amount: Double,
+    val amountFen: Long,
     val time: Date,
     val categoryHint: String? = null,
     val note: String? = null,
