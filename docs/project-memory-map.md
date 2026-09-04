@@ -5,9 +5,19 @@
 ## 根入口
 
 - 项目唯一根目录：D:\项目。
-- Current State 唯一权威来源：D:\项目\工作交接文档.md，当前版本为 v3.0。
+- Current State 唯一权威来源：D:\项目\工作交接文档.md，当前版本为 v4.4（2026-08-31 更新）。
 - UI、交互和功能参考：D:\项目\猫咪生活报\workbench-desktop.html。
 - 网页只提供参考；用户当前明确要求与工作交接文档优先。
+
+## 记忆层分工（dsh-auto-memory 插件 v0.1.32）
+
+- 产品/工程事实的 Current State 唯一权威 = 工作交接文档.md；插件项目笔记只记 AI 工作现状与过程，不复制交接文档正文。
+- AI 持久记忆由 dsh-auto-memory 插件统一管理（集中式存储，~/.dsh/memory/）：
+  - 用户级规则：~/.dsh/memory/MEMORY.md（跨项目规则与偏好）
+  - 本项目笔记：~/.dsh/memory/workspaces/--D--项目--/MEMORY.md（四层：Current State(唯一权威,覆盖更新) / Constraints(增改留痕) / Lessons(增改留痕) / 日期流水段）
+  - 每日日志：~/.dsh/memory/workspaces/--D--项目--/YYYY-MM-DD.md（append-only，条目格式 `- HH:MM 内容`）
+  - 反思：~/.dsh/memory/workspaces/--D--项目--/reflections/；日历：~/.dsh/memory/CALENDAR.md
+- 记忆写入只走插件工具：memory_log（日志）/ memory_note（layer=state/constraint/lesson/history 四层）/ memory_user（用户级）/ memory_reflect（反思）/ memory_consolidate（固化）。写入前按生命周期四动作裁决（追加/覆写留痕/合并去重/删除留痕），条目用客观陈述（第三人称），一条信息只进一层，不记密钥。
 
 ## 证据优先级
 
@@ -84,8 +94,9 @@
 
 ## 维护边界
 
-- 只有用户明确要求时才更新本地图或持久记忆。
+- 只有用户明确要求时才更新本地图（本文档）或持久记忆。
 - 更新本地图时只维护章节名称、文件路径、证据类型和路由顺序，不复制交接文档正文。
-- 持久记忆更新只写入 C:\Users\Administrator\.codex\memories\extensions\ad_hoc\notes\ 的最小授权备注；不得直接修改 MEMORY.md、memory_summary.md 或历史汇总。
+- 持久记忆更新只走 dsh-auto-memory 插件工具与集中式存储（见「记忆层分工」），落盘 ~/.dsh/memory/ 下；不直接手改记忆文件（插件写路径自带三查裁决/留痕/预算护栏，手改会绕过）。
+- 其他 AI 工具的记忆（Codex 等）只作外部源：C:\Users\Leon4\.codex\memories\（含 MEMORY.md、memory_summary.md、raw_memories.md、rollout_summaries/）。经 memory_external 链接方式接入或按需读取，不得直接改写其 MEMORY.md、memory_summary.md 或历史汇总。
 - 不保存 API Key、DeepSeek Key、个人数据、完整聊天、推理过程或原始日志。
 - 不用历史文档、旧 README、旧 APK、文件名或记忆条目覆盖实时源码、测试和设备事实。

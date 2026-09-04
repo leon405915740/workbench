@@ -1,0 +1,66 @@
+/* 猫咪生活报 · 安卓端 UI mockup 品牌系统 */
+:root {
+  --cat-paper-bg: #f2e9d5;
+  --cat-surface-card: #faf5e9;
+  --cat-surface-nested: #f5edda;
+
+  --cat-border: #e6dcc6;
+  --cat-border-input: #d8c9a9;
+
+  --cat-text: #4a3b28;
+  --cat-text-secondary: #8a7457;
+  --cat-text-tertiary: #b19a77;
+
+  --cat-accent: #d9832b;
+  --cat-accent-muted: #f6e7cf;
+  --cat-on-accent: #3a2a18;
+
+  --cat-module-green: #3f6b52;
+  --cat-module-blue: #5b718f;
+  --cat-module-ochre: #b5742c;
+  --cat-module-clay: #b35b3e;
+  --cat-module-olive: #8a6d44;
+
+  --cat-danger: #b3483a;
+  --cat-danger-muted: #f6e2db;
+
+  --cat-drawer-bg: #4a3828;
+  --cat-drawer-bg-top: #5a4531;
+  --cat-drawer-text: #f6ecd7;
+  --cat-drawer-text-mute: rgba(246, 236, 215, 0.55);
+  --cat-drawer-hover: rgba(246, 236, 215, 0.08);
+  --cat-drawer-active: rgba(246, 236, 215, 0.14);
+
+  --cat-shadow-card: 0 1px 2px rgba(74, 56, 40, 0.05), 0 4px 16px rgba(74, 56, 40, 0.07);
+  --cat-shadow-overlay: 0 10px 28px rgba(74, 56, 40, 0.16);
+
+  --cat-radius-sm: 8px;
+  --cat-radius-md: 12px;
+  --cat-radius-lg: 16px;
+  --cat-radius-full: 9999px;
+
+  /* 语义别名（供 preflight / Tailwind 使用） */
+  --cat-background: var(--cat-paper-bg);
+  --cat-foreground: var(--cat-text);
+  --cat-card: var(--cat-surface-card);
+  --cat-card-foreground: var(--cat-text);
+  --cat-popover: var(--cat-surface-card);
+  --cat-popover-foreground: var(--cat-text);
+  --cat-primary: var(--cat-accent);
+  --cat-primary-foreground: var(--cat-on-accent);
+  --cat-secondary: var(--cat-surface-nested);
+  --cat-secondary-foreground: var(--cat-text);
+  --cat-muted: var(--cat-surface-nested);
+  --cat-muted-foreground: var(--cat-text-secondary);
+  --cat-accent: var(--cat-accent);
+  --cat-accent-foreground: var(--cat-on-accent);
+  --cat-destructive: var(--cat-danger);
+  --cat-destructive-foreground: var(--cat-drawer-text);
+  --cat-border: var(--cat-border);
+  --cat-input: var(--cat-border-input);
+  --cat-ring: var(--cat-accent);
+  --cat-radius: var(--cat-radius-md);
+
+  --cat-font-sans: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --cat-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

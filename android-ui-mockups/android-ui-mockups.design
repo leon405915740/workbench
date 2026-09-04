@@ -1,0 +1,113 @@
+{
+  "data": [
+    {
+      "id": "page-home",
+      "title": "首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1787967820000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1991,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-a6682c80",
+          "measuredAt": 1788059843805
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home.html",
+        "interactions": [
+          {
+            "domId": "nav-habits",
+            "targetPageId": "page-habits",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-plan",
+            "targetPageId": "page-plan",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-habits",
+      "title": "习惯打卡",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1787967820000,
+      "canvasData": {
+        "x": 169,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1326,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-2d302b9d",
+          "measuredAt": 1788060750687
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/habits.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-plan",
+            "targetPageId": "page-plan",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-plan",
+      "title": "今日计划",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1787967820000,
+      "canvasData": {
+        "x": 338,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-cb2edec6",
+          "measuredAt": 1788060750687
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/plan.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-habits",
+            "targetPageId": "page-habits",
+            "hideEdge": true
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "mobile",
+    "projectName": "安卓 UI 重设计 mockup",
+    "visualEditorEnabled": false,
+    "showEdge": false
+  }
+}

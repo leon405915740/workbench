@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运动计时 · 生活手记</title>
+    <style id="theme-vars">
+:root {
+  --bg: #f7f6f3;
+  --card: #ffffff;
+  --card-raised: #ffffff;
+  --surface: #f1f0ec;
+  --surface-hover: #ebeae6;
+
+  --border: #e8e6e1;
+  --border-soft: #eeede9;
+  --input: #e0ded9;
+
+  --text: #1f1f1f;
+  --text-secondary: #6b6b6b;
+  --text-tertiary: #9a9a9a;
+
+  --accent: #397565;
+  --accent-soft: #e8f0ed;
+  --accent-foreground: #ffffff;
+
+  --module-green: #397565;
+  --module-blue: #4a7c8c;
+  --module-ochre: #a67c00;
+  --module-clay: #a85d4a;
+  --module-olive: #7a7a5a;
+
+  --danger: #c45c4a;
+  --danger-soft: #f7e8e5;
+
+  --drawer-bg: #252522;
+  --drawer-bg-top: #2f2f2c;
+  --drawer-text: #f7f6f3;
+  --drawer-text-mute: rgba(247, 246, 243, 0.55);
+  --drawer-hover: rgba(247, 246, 243, 0.08);
+  --drawer-active: rgba(247, 246, 243, 0.14);
+
+  --shadow-card: 0 1px 2px rgba(31, 31, 31, 0.04), 0 6px 20px rgba(31, 31, 31, 0.06);
+  --shadow-overlay: 0 10px 30px rgba(31, 31, 31, 0.12);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-full: 9999px;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card-foreground: var(--text);
+  --popover: var(--card);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--accent);
+  --accent-foreground: var(--accent-foreground);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--border);
+  --input: var(--input);
+  --ring: var(--accent);
+  --radius: var(--radius-md);
+
+  --font-sans: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--bg);
+    --color-foreground: var(--text);
+    --color-card: var(--card);
+    --color-card-foreground: var(--text);
+    --color-popover: var(--card);
+    --color-popover-foreground: var(--text);
+    --color-primary: var(--accent);
+    --color-primary-foreground: var(--accent-foreground);
+    --color-secondary: var(--surface);
+    --color-secondary-foreground: var(--text);
+    --color-muted: var(--surface);
+    --color-muted-foreground: var(--text-secondary);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--danger);
+    --color-destructive-foreground: #ffffff;
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--accent);
+    --radius-sm: var(--radius-sm);
+    --radius-md: var(--radius-md);
+    --radius-lg: var(--radius-lg);
+  }
+  @layer base {
+    body { background: var(--bg); color: var(--text); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--bg); }
+      .text-background { color: var(--bg); }
+      .border-background { border-color: var(--bg); }
+      .ring-background { --tw-ring-color: var(--bg); }
+      .bg-foreground { background-color: var(--text); }
+      .text-foreground { color: var(--text); }
+      .border-foreground { border-color: var(--text); }
+      .ring-foreground { --tw-ring-color: var(--text); }
+      .bg-card { background-color: var(--card); }
+      .text-card { color: var(--card); }
+      .border-card { border-color: var(--card); }
+      .ring-card { --tw-ring-color: var(--card); }
+      .bg-card-foreground { background-color: var(--text); }
+      .text-card-foreground { color: var(--text); }
+      .border-card-foreground { border-color: var(--text); }
+      .ring-card-foreground { --tw-ring-color: var(--text); }
+      .bg-popover { background-color: var(--card); }
+      .text-popover { color: var(--card); }
+      .border-popover { border-color: var(--card); }
+      .ring-popover { --tw-ring-color: var(--card); }
+      .bg-popover-foreground { background-color: var(--text); }
+      .text-popover-foreground { color: var(--text); }
+      .border-popover-foreground { border-color: var(--text); }
+      .ring-popover-foreground { --tw-ring-color: var(--text); }
+      .bg-primary { background-color: var(--accent); }
+      .text-primary { color: var(--accent); }
+      .border-primary { border-color: var(--accent); }
+      .ring-primary { --tw-ring-color: var(--accent); }
+      .bg-primary-foreground { background-color: var(--accent-foreground); }
+      .text-primary-foreground { color: var(--accent-foreground); }
+      .border-primary-foreground { border-color: var(--accent-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--accent-foreground); }
+      .bg-secondary { background-color: var(--surface); }
+      .text-secondary { color: var(--surface); }
+      .border-secondary { border-color: var(--surface); }
+      .ring-secondary { --tw-ring-color: var(--surface); }
+      .bg-secondary-foreground { background-color: var(--text); }
+      .text-secondary-foreground { color: var(--text); }
+      .border-secondary-foreground { border-color: var(--text); }
+      .ring-secondary-foreground { --tw-ring-color: var(--text); }
+      .bg-muted { background-color: var(--surface); }
+      .text-muted { color: var(--surface); }
+      .border-muted { border-color: var(--surface); }
+      .ring-muted { --tw-ring-color: var(--surface); }
+      .bg-muted-foreground { background-color: var(--text-secondary); }
+      .text-muted-foreground { color: var(--text-secondary); }
+      .border-muted-foreground { border-color: var(--text-secondary); }
+      .ring-muted-foreground { --tw-ring-color: var(--text-secondary); }
+      .bg-accent { background-color: var(--accent); }
+      .text-accent { color: var(--accent); }
+      .border-accent { border-color: var(--accent); }
+      .ring-accent { --tw-ring-color: var(--accent); }
+      .bg-accent-foreground { background-color: var(--accent-foreground); }
+      .text-accent-foreground { color: var(--accent-foreground); }
+      .border-accent-foreground { border-color: var(--accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--accent-foreground); }
+      .bg-destructive { background-color: var(--danger); }
+      .text-destructive { color: var(--danger); }
+      .border-destructive { border-color: var(--danger); }
+      .ring-destructive { --tw-ring-color: var(--danger); }
+      .bg-destructive-foreground { background-color: #ffffff; }
+      .text-destructive-foreground { color: #ffffff; }
+      .border-destructive-foreground { border-color: #ffffff; }
+      .ring-destructive-foreground { --tw-ring-color: #ffffff; }
+      .bg-border { background-color: var(--border); }
+      .text-border { color: var(--border); }
+      .border-border { border-color: var(--border); }
+      .ring-border { --tw-ring-color: var(--border); }
+      .bg-input { background-color: var(--input); }
+      .text-input { color: var(--input); }
+      .border-input { border-color: var(--input); }
+      .ring-input { --tw-ring-color: var(--input); }
+      .bg-ring { background-color: var(--accent); }
+      .text-ring { color: var(--accent); }
+      .border-ring { border-color: var(--accent); }
+      .ring-ring { --tw-ring-color: var(--accent); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen bg-background font-sans antialiased">
+  <style>
+    .shadow-card { box-shadow: var(--shadow-card); }
+    .shadow-overlay { box-shadow: var(--shadow-overlay); }
+    .bg-drawer { background: linear-gradient(180deg, var(--drawer-bg-top), var(--drawer-bg)); }
+    .text-module-green { color: var(--module-green); }
+    .text-module-ochre { color: var(--module-ochre); }
+    .bg-module-green { background-color: var(--module-green); }
+    .bg-module-ochre { background-color: var(--module-ochre); }
+    .ring-track { stroke: var(--surface); }
+    .ring-green { stroke: var(--module-green); }
+  </style>
+
+  <aside class="fixed left-0 top-0 z-30 flex h-full w-16 flex-col bg-drawer text-[var(--drawer-text)]">
+    <a href="profile.html" title="个人中心" class="flex h-16 items-center justify-center border-b border-[var(--drawer-hover)] transition-colors hover:bg-[var(--drawer-hover)]">
+      <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[var(--module-green)] to-[#2e5c4e] text-[var(--drawer-text)]">
+        <i data-lucide="user" class="h-5 w-5"></i>
+      </span>
+    </a>
+    <nav class="flex flex-1 flex-col gap-1 overflow-y-auto p-2 no-scrollbar">
+      <a href="home.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="home" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">首页</span>
+      </a>
+      <a href="plan.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="calendar-check" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">今日计划</span>
+      </a>
+      <a href="habits.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="check-circle-2" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">习惯打卡</span>
+      </a>
+      <a href="reading.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="book-open" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">阅读</span>
+      </a>
+      <a href="accounting.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="receipt" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">记账</span>
+      </a>
+      <a href="essay.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="pen-tool" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">随笔</span>
+      </a>
+      <a href="clipping.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="newspaper" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">剪报</span>
+      </a>
+      <a href="insight.html" class="nav-item flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[var(--drawer-text-mute)] hover:bg-[var(--drawer-hover)] transition-colors">
+        <i data-lucide="bar-chart-2" class="h-5 w-5"></i>
+        <span class="text-[10px] font-medium leading-none">洞察</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="ml-16 flex min-h-screen flex-col items-center justify-center bg-background p-6">
+    <div class="w-full max-w-sm">
+      <div class="mb-10 flex justify-center">
+        <button class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-secondary-foreground shadow-card">
+          <i data-lucide="activity" class="h-4 w-4 text-module-green"></i>
+          <span>跑步</span>
+          <i data-lucide="chevron-down" class="h-3.5 w-3.5 text-muted-foreground"></i>
+        </button>
+      </div>
+
+      <div class="relative mx-auto mb-10 h-64 w-64">
+        <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
+          <path class="ring-track" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="2"></path>
+          <path class="ring-green" stroke-dasharray="42, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span class="text-5xl font-semibold tracking-tight text-foreground" style="font-variant-numeric: tabular-nums;">00:12:34</span>
+          <span class="mt-2 text-xs font-medium text-muted-foreground">已进行 12 分 34 秒</span>
+        </div>
+      </div>
+
+      <div class="mb-8 flex justify-center gap-6 text-center">
+        <div>
+          <div class="text-lg font-semibold text-foreground">3.2</div>
+          <div class="text-[10px] text-muted-foreground">公里</div>
+        </div>
+        <div class="border-l border-border pl-6">
+          <div class="text-lg font-semibold text-foreground">142</div>
+          <div class="text-[10px] text-muted-foreground">千卡</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <button class="w-full rounded-[var(--radius-lg)] bg-accent py-4 text-base font-semibold text-primary-foreground shadow-overlay transition hover:brightness-105">
+          结束
+        </button>
+        <button class="w-full rounded-[var(--radius-lg)] py-3 text-sm font-medium text-muted-foreground transition hover:bg-secondary">
+          取消
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

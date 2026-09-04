@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.0",
+  "skillProvenance": {
+    "name": "solo-design",
+    "version": "2026.08.06.19.15.08",
+    "release": "prompt-base-cloud-ssot-migration",
+    "version_source": "skill-release-manifest.json",
+    "schema_version": "1.0",
+    "read_status": "loaded"
+  },
+  "project": {
+    "operation": "create",
+    "resolvedLane": "complex_html_page",
+    "intentProfile": "multi-page-mobile-mockup",
+    "selectedIntentWorkflowRead": true,
+    "contextRequirementsLoaded": [
+      { "path": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md", "readStatus": "loaded", "bodyRead": true },
+      { "path": "shared-runtime/design-artifact-formats/design-project-file-format.md", "readStatus": "loaded", "bodyRead": true },
+      { "path": "shared-runtime/orchestration-summary-contract/orchestration-summary-contract.md", "readStatus": "loaded", "bodyRead": true },
+      { "path": "delivery-quality/reference-material-ingestion-rules.md", "readStatus": "loaded", "bodyRead": true }
+    ],
+    "contextReadScope": "complex_html_page lane + design file format + orchestration contract + reference ingestion",
+    "readScopeLedger": [],
+    "dispatchPreflightManifest": [
+      { "nodeId": "page-home", "htmlSrc": "pages/home.html", "laneContract": "complex_html_page", "sharedTemplate": null, "supplementaryReads": [], "allowedWritePaths": ["pages/home.html"], "forbiddenWriteRoots": ["android-ui-mockups.design", "runtime-orchestration-summary.json"] },
+      { "nodeId": "page-habits", "htmlSrc": "pages/habits.html", "laneContract": "complex_html_page", "sharedTemplate": null, "supplementaryReads": [], "allowedWritePaths": ["pages/habits.html"], "forbiddenWriteRoots": ["android-ui-mockups.design", "runtime-orchestration-summary.json"] },
+      { "nodeId": "page-plan", "htmlSrc": "pages/plan.html", "laneContract": "complex_html_page", "sharedTemplate": null, "supplementaryReads": [], "allowedWritePaths": ["pages/plan.html"], "forbiddenWriteRoots": ["android-ui-mockups.design", "runtime-orchestration-summary.json"] }
+    ],
+    "expectedDispatches": [
+      { "nodeId": "page-home", "packetType": "complex-page", "status": "completed", "changedFiles": ["pages/home.html"], "toolCallLedger": { "source": "main-agent-runtime-trace", "traceDigest": "page-home-write-trace", "todoWriteCalls": 0, "previewCalls": 0, "validationScriptCalls": 0, "helperScriptWrites": 0 } },
+      { "nodeId": "page-habits", "packetType": "complex-page", "status": "completed", "changedFiles": ["pages/habits.html"], "toolCallLedger": { "source": "main-agent-runtime-trace", "traceDigest": "page-habits-write-trace", "todoWriteCalls": 0, "previewCalls": 0, "validationScriptCalls": 0, "helperScriptWrites": 0 } },
+      { "nodeId": "page-plan", "packetType": "complex-page", "status": "completed", "changedFiles": ["pages/plan.html"], "toolCallLedger": { "source": "main-agent-runtime-trace", "traceDigest": "page-plan-write-trace", "todoWriteCalls": 0, "previewCalls": 0, "validationScriptCalls": 0, "helperScriptWrites": 0 } }
+    ],
+    "validationRunDiscipline": "run-validate-design-workspace-before-delivery",
+    "validationHistory": [],
+    "validationRepairLedger": [],
+    "validationSnapshot": {},
+    "artifactReadinessEvidence": {},
+    "lowValueCallWatchdog": { "noProgressNextAction": "proceed-to-validation" },
+    "sourceAuthorityLock": {
+      "visualAuthority": "reference-html-file",
+      "contentSupplement": "user-text-requirements",
+      "browserObservationRole": "not-used",
+      "mayOverrideVisualAuthority": true,
+      "lockedBeforeDispatch": true
+    },
+    "visualQualityCheckpoints": [
+      { "id": "vq-01", "checkpoint": "visual-anchor", "target": "retro newspaper side rail + warm paper background must be visible on every page" },
+      { "id": "vq-02", "checkpoint": "information-hierarchy", "target": "page title > section cards > actions; accent bars and module colors distinguish sections" },
+      { "id": "vq-03", "checkpoint": "composition-structure", "target": "fixed 64px left rail + scrollable main content with card grid and list layouts" },
+      { "id": "vq-04", "checkpoint": "implementation-strategy", "target": "single CSS token file + Tailwind browser runtime + inline SVG rings and trend charts" }
+    ],
+    "deviceType": "mobile",
+    "projectName": "安卓 UI 重设计 mockup",
+    "designRead": "Personal workbench mobile app / daily productivity users / warm editorial tone / moderate density / avoid cold tech aesthetics",
+    "designDials": { "layoutVariance": 3, "motionIntensity": 2, "visualDensity": 4 }
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "cssFilePath": "colors_and_type.css",
+    "brandPrefix": "cat",
+    "styleConstraints": { "radiusMax": 16, "staticShadowAlphaMax": 0.07 }
+  },
+  "pages": [
+    {
+      "nodeId": "page-home",
+      "title": "首页",
+      "htmlSrc": "pages/home.html",
+      "pageIndex": 1,
+      "visualNorthStar": "Dashboard hero + quick-add grid + overview ring + habit weekly tracker + summary cards, warm newspaper editor palette",
+      "compositionPattern": "sidebar-rail + vertical scrolling card stack with 2-column sub-grids",
+      "continuityAnchors": ["shared dark-brown side rail", "paper background", "card border+shadow language"],
+      "componentPlan": ["side-rail", "hero-banner", "quick-add-buttons", "overview-ring", "habit-tracker", "plan-card", "pomodoro-card", "trend-chart", "summary-cards"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "mobileNavigationActiveKey": null
+    },
+    {
+      "nodeId": "page-habits",
+      "title": "习惯打卡",
+      "htmlSrc": "pages/habits.html",
+      "pageIndex": 2,
+      "visualNorthStar": "Module page with stats row, weekly tracker table, pinned habits, habit list with streaks, green module identity",
+      "compositionPattern": "sidebar-rail + stats row + search + tracker table + pinned card + list",
+      "continuityAnchors": ["shared dark-brown side rail", "paper background", "card border+shadow language"],
+      "componentPlan": ["side-rail", "stats-row", "search-field", "weekly-tracker-table", "pinned-card", "habit-list", "streak-badge"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "mobileNavigationActiveKey": null
+    },
+    {
+      "nodeId": "page-plan",
+      "title": "今日计划",
+      "htmlSrc": "pages/plan.html",
+      "pageIndex": 3,
+      "visualNorthStar": "Module page with progress summary, pinned tasks, category sections with priority badges, blue module identity",
+      "compositionPattern": "sidebar-rail + progress summary + pinned tasks + category cards",
+      "continuityAnchors": ["shared dark-brown side rail", "paper background", "card border+shadow language"],
+      "componentPlan": ["side-rail", "progress-summary", "pinned-tasks", "category-section", "priority-badge"],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "mobileNavigationActiveKey": null
+    }
+  ],
+  "assets": [],
+  "wiringPlan": [
+    { "fromNodeId": "page-home", "toNodeId": "page-habits", "domId": "nav-habits", "hideEdge": true },
+    { "fromNodeId": "page-home", "toNodeId": "page-plan", "domId": "nav-plan", "hideEdge": true },
+    { "fromNodeId": "page-habits", "toNodeId": "page-home", "domId": "nav-home", "hideEdge": true },
+    { "fromNodeId": "page-habits", "toNodeId": "page-plan", "domId": "nav-plan", "hideEdge": true },
+    { "fromNodeId": "page-plan", "toNodeId": "page-home", "domId": "nav-home", "hideEdge": true },
+    { "fromNodeId": "page-plan", "toNodeId": "page-habits", "domId": "nav-habits", "hideEdge": true }
+  ],
+  "hiddenInteractionPlan": []
+}
