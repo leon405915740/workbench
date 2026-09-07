@@ -4,66 +4,132 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/quick_card_bg"
-    android:padding="16dp">
+    android:paddingTop="20dp"
+    android:paddingBottom="24dp"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp">
 
+    <!-- 顶部装饰条 + 标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp">
+
+        <View
+            android:layout_width="32dp"
+            android:layout_height="3dp"
+            android:background="@color/quick_primary"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="快捷记账"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/quick_text_primary" />
+
+            <!-- 关闭按钮 — 用 TextView 做的精致 X -->
+            <TextView
+                android:id="@+id/btn_close"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="✕"
+                android:textSize="16sp"
+                android:textColor="@color/quick_text_secondary"
+                android:background="@drawable/quick_ripple_close" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 金额区 — 大号突出，¥ 符号用主题绿 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="12dp">
+        android:gravity="bottom"
+        android:paddingStart="4dp"
+        android:layout_marginBottom="4dp">
 
         <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¥"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/quick_primary"
+            android:layout_marginEnd="2dp"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/et_amount"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="快捷记账"
-            android:textSize="18sp"
+            android:hint="0.00"
+            android:inputType="numberDecimal"
+            android:textSize="32sp"
             android:textStyle="bold"
-            android:textColor="@color/quick_card_text_primary" />
-
-        <ImageButton
-            android:id="@+id/btn_close"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
             android:background="@null"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:contentDescription="关闭" />
+            android:textColor="@color/quick_text_primary"
+            android:textColorHint="@color/quick_text_hint"
+            android:padding="0dp"
+            android:layout_marginBottom="2dp" />
     </LinearLayout>
 
-    <EditText
-        android:id="@+id/et_amount"
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="金额"
-        android:inputType="numberDecimal"
-        android:textSize="16sp"
-        android:background="@drawable/quick_edit_bg"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="12dp"
-        android:textColor="@color/quick_card_text_primary"
-        android:textColorHint="@color/quick_card_text_secondary"
-        android:layout_marginBottom="8dp" />
+        android:layout_height="1dp"
+        android:background="@color/quick_border_input"
+        android:layout_marginBottom="16dp" />
 
+    <!-- 分类标签 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="分类"
-        android:textSize="13sp"
-        android:textColor="@color/quick_card_text_secondary"
-        android:layout_marginBottom="4dp" />
-
-    <TextView
-        android:id="@+id/tv_category"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="12dp"
-        android:textSize="14sp"
-        android:background="@drawable/quick_edit_bg"
-        android:textColor="@color/quick_card_text_primary"
+        android:textSize="12sp"
+        android:textColor="@color/quick_text_secondary"
+        android:letterSpacing="0.1"
         android:layout_marginBottom="8dp" />
 
+    <!-- 当前选中的分类（可点击展开） -->
+    <LinearLayout
+        android:id="@+id/tv_category"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:background="@drawable/quick_edit_selector"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tv_category_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="15sp"
+            android:textColor="@color/quick_text_primary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="▾"
+            android:textSize="14sp"
+            android:textColor="@color/quick_text_secondary" />
+    </LinearLayout>
+
+    <!-- 分类网格（展开态） -->
     <LinearLayout
         android:id="@+id/category_grid"
         android:layout_width="match_parent"
@@ -72,58 +138,61 @@
         android:visibility="gone"
         android:layout_marginBottom="8dp" />
 
+    <!-- 商家 -->
     <EditText
         android:id="@+id/et_merchant"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="44dp"
         android:hint="商家（选填）"
         android:textSize="14sp"
-        android:background="@drawable/quick_edit_bg"
+        android:background="@drawable/quick_edit_selector"
         android:paddingHorizontal="12dp"
-        android:paddingVertical="12dp"
-        android:textColor="@color/quick_card_text_primary"
-        android:textColorHint="@color/quick_card_text_secondary"
+        android:textColor="@color/quick_text_primary"
+        android:textColorHint="@color/quick_text_hint"
         android:layout_marginBottom="8dp" />
 
+    <!-- 备注 -->
     <EditText
         android:id="@+id/et_note"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="44dp"
         android:hint="备注（选填）"
         android:textSize="14sp"
-        android:background="@drawable/quick_edit_bg"
+        android:background="@drawable/quick_edit_selector"
         android:paddingHorizontal="12dp"
-        android:paddingVertical="12dp"
-        android:textColor="@color/quick_card_text_primary"
-        android:textColorHint="@color/quick_card_text_secondary"
-        android:layout_marginBottom="16dp" />
+        android:textColor="@color/quick_text_primary"
+        android:textColorHint="@color/quick_text_hint"
+        android:layout_marginBottom="20dp" />
 
+    <!-- 按钮组 — 用自定义背景的 TextView，不要原生 Button -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <Button
+        <TextView
             android:id="@+id/btn_cancel"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="10dp"
+            android:gravity="center"
             android:text="取消"
-            android:textSize="16sp"
-            android:backgroundTint="@color/quick_card_gray"
-            android:textColor="@color/quick_card_text_primary" />
+            android:textSize="15sp"
+            android:textColor="@color/quick_text_secondary"
+            android:background="@drawable/quick_btn_outline" />
 
-        <Button
+        <TextView
             android:id="@+id/btn_submit"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="确认"
-            android:textSize="16sp"
-            android:textColor="#FFFFFFFF"
-            android:backgroundTint="@color/quick_card_green" />
+            android:gravity="center"
+            android:text="确认记账"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/quick_text_on_primary"
+            android:background="@drawable/quick_btn_primary" />
     </LinearLayout>
 </LinearLayout>
 

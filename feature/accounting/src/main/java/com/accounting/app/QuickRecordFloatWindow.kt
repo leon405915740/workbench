@@ -69,15 +69,16 @@ class QuickRecordFloatWindow private constructor() {
         val etAmount = view.findViewById<EditText>(R.id.et_amount)
         val etMerchant = view.findViewById<EditText>(R.id.et_merchant)
         val etNote = view.findViewById<EditText>(R.id.et_note)
-        val tvCategory = view.findViewById<TextView>(R.id.tv_category)
-        val btnClose = view.findViewById<ImageButton>(R.id.btn_close)
-        val btnCancel = view.findViewById<Button>(R.id.btn_cancel)
-        val btnSubmit = view.findViewById<Button>(R.id.btn_submit)
+        val tvCategoryLayout = view.findViewById<LinearLayout>(R.id.tv_category)
+        val tvCategoryText = view.findViewById<TextView>(R.id.tv_category_text)
+        val btnClose = view.findViewById<TextView>(R.id.btn_close)
+        val btnCancel = view.findViewById<TextView>(R.id.btn_cancel)
+        val btnSubmit = view.findViewById<TextView>(R.id.btn_submit)
         val categoryGrid = view.findViewById<LinearLayout>(R.id.category_grid)
 
         val categories = CategoryConstants.getCategories("expense")
         var currentCategory = CategoryConstants.DEFAULT_QUICK_PAYMENT_CATEGORY
-        tvCategory.text = currentCategory
+        tvCategoryText.text = currentCategory
         etAmount.setText(AmountUtils.fenToYuan(amountFen))
         etMerchant.setText(merchant)
 
@@ -98,17 +99,17 @@ class QuickRecordFloatWindow private constructor() {
                     val tv = TextView(appContext).apply {
                         text = cat
                         textSize = 12f
-                        setPadding(dp(appContext, 8), dp(appContext, 6), dp(appContext, 8), dp(appContext, 6))
+                        setPadding(dp(appContext, 10), dp(appContext, 8), dp(appContext, 10), dp(appContext, 8))
                         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                             marginStart = if (j == 0) 0 else dp(appContext, 8)
                         }
                         gravity = Gravity.CENTER
-                        setBackgroundResource(R.drawable.quick_cat_item)
+                        setBackgroundResource(R.drawable.quick_chip_selector)
                         setTextColor(if (cat == currentCategory) 0xFFFFFFFF.toInt() else 0xFF1A1A1A.toInt())
                         isSelected = cat == currentCategory
                         setOnClickListener {
                             currentCategory = cat
-                            tvCategory.text = cat
+                            tvCategoryText.text = cat
                             // 更新选中态
                             gridRows.forEach { row ->
                                 for (k in 0 until row.childCount) {
@@ -135,14 +136,16 @@ class QuickRecordFloatWindow private constructor() {
         }
 
         // 分类点击展开/收起
-        tvCategory.setOnClickListener {
+        tvCategoryLayout.setOnClickListener {
             categoryGrid.visibility = if (categoryGrid.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         }
 
         // 更新按钮启用态
         fun updateSubmitEnabled() {
             val amt = runCatching { AmountUtils.yuanToFen(etAmount.text.toString()) }.getOrDefault(0L)
-            btnSubmit.isEnabled = amt > 0 && currentCategory.isNotBlank()
+            val enabled = amt > 0 && currentCategory.isNotBlank()
+            btnSubmit.alpha = if (enabled) 1f else 0.4f
+            btnSubmit.isClickable = enabled
         }
         etAmount.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}

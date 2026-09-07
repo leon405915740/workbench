@@ -388,17 +388,23 @@ private fun PlanEditorSheet(
                     )
                 }
             }
-            OutlinedTextField(
-                value = date,
-                onValueChange = { date = it },
-                label = { Text("计划日期 (yyyy-MM-dd)") },
-                singleLine = true,
-                isError = !validDate,
-                supportingText = {
-                    if (!validDate) Text("请输入有效日期，例如 2026-09-02")
+            OutlinedButton(
+                onClick = {
+                    val init = runCatching { LocalDate.parse(date.trim()) }.getOrDefault(LocalDate.now())
+                    android.app.DatePickerDialog(
+                        context,
+                        { _, y, m, d ->
+                            date = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d)
+                        },
+                        init.year, init.monthValue - 1, init.dayOfMonth
+                    ).show()
                 },
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (validDate) date else "选择日期")
+            }
             Text("计划时间", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(
                 modifier = Modifier.fillMaxWidth(),

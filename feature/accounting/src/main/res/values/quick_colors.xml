@@ -1,4 +1,25 @@
 ﻿<resources>
+    <!-- 卡片主色 -->
+    <color name="quick_bg_surface">#FFFFFF</color>
+    <color name="quick_bg_input">#F7F8FA</color>
+    <color name="quick_bg_input_pressed">#EEF0F3</color>
+
+    <!-- 主题绿（微信色） -->
+    <color name="quick_primary">#07C160</color>
+    <color name="quick_primary_dark">#06AD56</color>
+    <color name="quick_primary_light">#E8F7EF</color>
+
+    <!-- 文字 -->
+    <color name="quick_text_primary">#1A1A1A</color>
+    <color name="quick_text_secondary">#8E8E93</color>
+    <color name="quick_text_hint">#C7C7CC</color>
+    <color name="quick_text_on_primary">#FFFFFF</color>
+
+    <!-- 边框 & 分隔 -->
+    <color name="quick_border_input">#E5E5EA</color>
+    <color name="quick_border_focused">#07C160</color>
+
+    <!-- 旧色兼容 -->
     <color name="quick_card_white">#FFFFFFFF</color>
     <color name="quick_card_gray">#FFF5F5F5</color>
     <color name="quick_card_green">#FF07C160</color>
