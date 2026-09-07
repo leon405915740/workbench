@@ -1,6 +1,6 @@
 package com.aigrowth.os.feature.plan
 
-import android.app.TimePickerDialog
+import android.widget.NumberPicker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.aigrowth.os.core.database.workbench.entity.PlanItem
 import com.aigrowth.os.ui.common.*
@@ -388,53 +389,22 @@ private fun PlanEditorSheet(
                     )
                 }
             }
-            OutlinedButton(
-                onClick = {
-                    val init = runCatching { LocalDate.parse(date.trim()) }.getOrDefault(LocalDate.now())
-                    android.app.DatePickerDialog(
-                        context,
-                        { _, y, m, d ->
-                            date = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d)
-                        },
-                        init.year, init.monthValue - 1, init.dayOfMonth
-                    ).show()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (validDate) date else "选择日期")
-            }
+            Text("计划日期", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DateWheelPicker(
+                date = date,
+                onChange = { date = it }
+            )
             Text("计划时间", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = {
-                        val initialTime = planTime
-                            ?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
-                            ?: LocalTime.now()
-                        TimePickerDialog(
-                            context,
-                            { _, hour, minute ->
-                                planTime = String.format(Locale.US, "%02d:%02d", hour, minute)
-                            },
-                            initialTime.hour,
-                            initialTime.minute,
-                            true
-                        ).show()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Schedule, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(planTime ?: "选择时间")
-                }
-                if (planTime != null) {
-                    TextButton(onClick = { planTime = null }) { Text("清除") }
-                }
+                TimeWheelPicker(
+                    time = planTime,
+                    onChange = { planTime = it }
+                )
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = { planTime = null }) { Text("清除") }
             }
             val selectedTime = planTime
             Text(

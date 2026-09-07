@@ -13,8 +13,8 @@ android {
         applicationId = "com.aigrowth.os"
         minSdk = 26
         targetSdk = 34
-        versionCode = 18
-        versionName = "1.10.4"
+        versionCode = 19
+        versionName = "1.10.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -96,4 +96,5 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
 
