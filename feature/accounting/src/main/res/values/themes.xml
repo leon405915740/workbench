@@ -3,4 +3,22 @@
     <!-- 纯 Compose 应用：使用框架自带无 ActionBar 主题作为 Activity 主题，
          实际界面配色由 Compose MaterialTheme 控制。 -->
     <style name="Theme.AccountingApp" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+        快捷记账小卡片 Popup：单层透明 Activity 主题。
+        父主题故意**不**使用 *.Dialog（避免"Manifest Dialog + Compose Dialog"双层嵌套，
+        带来的黑边 / 背景不透明 / 额外标题栏问题），只在窗口层做透明 + 遮罩。
+        windowIsTranslucent=true 使窗口下的宿主 App 仍可见；backgroundDimEnabled=true
+        让系统自动加暗化层，无需额外自绘 dim。windowDisablePreview 避免冷启动闪现白色预览。
+    -->
+    <style name="Theme.AccountingPopup" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.32</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+    </style>
 </resources>

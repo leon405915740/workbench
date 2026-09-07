@@ -143,7 +143,7 @@ class HomeViewModel @Inject constructor(
     ): List<FocusItem> {
         val result = mutableListOf<FocusItem>()
         plans.filter { it.pinned && it.planDate == today }.forEach {
-            result += FocusItem("plan:${it.id}", "今日计划", it.title, it.planTime ?: it.priority)
+            result += FocusItem("plan:${it.id}", "待办事项", it.title, it.planTime ?: it.priority)
         }
         habits.filter { it.pinned && it.active }.forEach {
             result += FocusItem("habit:${it.id}", "习惯打卡", it.title, "今日打卡")

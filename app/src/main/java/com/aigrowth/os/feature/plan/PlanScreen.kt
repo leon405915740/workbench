@@ -48,7 +48,7 @@ fun PlanScreen(vm: PlanViewModel = hiltViewModel()) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             WorkbenchTopBar(
-                title = "今日计划",
+                title = "待办事项",
                 subtitle = "安排优先级，聚焦最重要的事",
                 icon = Icons.Default.EventAvailable,
                 iconTint = ModuleGreen

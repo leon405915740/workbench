@@ -144,7 +144,7 @@ private data class NavItem(val route: String, val label: String, val icon: Image
 private fun SideNavigationBar(currentRoute: String?, width: androidx.compose.ui.unit.Dp, onNavigate: (String) -> Unit, onNavigateToProfile: () -> Unit) {
     val items = listOf(
         NavItem(Screen.Home.route, "首页", Icons.Default.Home),
-        NavItem(Screen.Plan.route, "今日计划", Icons.Default.Checklist),
+        NavItem(Screen.Plan.route, "待办事项", Icons.Default.Checklist),
         NavItem(Screen.Habits.route, "习惯打卡", Icons.Default.EventAvailable),
         NavItem(Screen.Reading.route, "阅读", Icons.Default.AutoStories),
         NavItem(Screen.Record.route, "记账", Icons.Default.Payments),

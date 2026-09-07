@@ -86,6 +86,8 @@ import java.util.Calendar
  * - 编辑模式：标题「编辑账单」，type 只读标签不可切换，底部显示「删除记录」按钮
  * - 提交时构造完整的 [EditDialogData] 回传，ViewModel 不读取 UI State
  *
+ * @param widthFraction 卡片宽度占屏幕的比例，默认 1f（主入口手动记账保持原全屏宽体验）；
+ *                      popup 小卡片调用时传 0.92f 左右，使外观更像浮层。
  * @param data            弹窗初始数据（含模式判断、字段预填、原上下文）
  * @param onSubmit        新建模式提交回调
  * @param onEditConfirm   编辑模式提交回调
@@ -98,7 +100,8 @@ fun EditRecordDialog(
     onSubmit: (EditDialogData) -> Unit,
     onEditConfirm: (EditDialogData) -> Unit,
     onDismiss: () -> Unit,
-    onDeleteRequest: () -> Unit
+    onDeleteRequest: () -> Unit,
+    widthFraction: Float = 1f,
 ) {
     val context = LocalContext.current
     val isEditMode = data.recordId != null
@@ -109,8 +112,9 @@ fun EditRecordDialog(
     var amountText by rememberSaveable {
         mutableStateOf(if (data.amount > 0) AmountUtils.fenToYuan(data.amount) else "")
     }
-    // 选中的分类：新建模式默认 null（用户选择），编辑模式预填 data.category
-    var category by rememberSaveable { mutableStateOf(data.category.takeIf { isEditMode }) }
+    // 选中的分类：编辑模式预填 data.category；新建模式若 data.category 非空也预填
+    // （如付款通知唤起的快捷记账默认"餐饮美食"），否则为 null 等待用户选择。
+    var category by rememberSaveable { mutableStateOf(data.category?.takeIf { it.isNotBlank() }) }
     // 商家名称
     var merchant by rememberSaveable { mutableStateOf(data.merchant ?: "") }
     // 备注
@@ -153,11 +157,11 @@ fun EditRecordDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        val coercedWidth = widthFraction.coerceIn(0.5f, 1f)
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.88f)
-                .padding(horizontal = 8.dp),
+                .fillMaxWidth(coercedWidth)
+                .fillMaxHeight(0.88f),
             shape = RoundedCornerShape(20.dp),
             color = CardWhite
         ) {

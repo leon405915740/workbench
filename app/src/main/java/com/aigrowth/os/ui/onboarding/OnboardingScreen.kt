@@ -68,7 +68,7 @@ fun OnboardingScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    FeatureItem(Icons.Default.Checklist, "今日计划", "安排每天的计划与待办")
+                    FeatureItem(Icons.Default.Checklist, "待办事项", "安排每天的计划与待办")
                     FeatureItem(Icons.Default.CheckCircle, "习惯打卡", "坚持每天的好习惯")
                     FeatureItem(Icons.Default.MenuBook, "阅读", "记录阅读进度与笔记")
                     FeatureItem(Icons.Default.DirectionsRun, "运动", "追踪每日运动打卡")

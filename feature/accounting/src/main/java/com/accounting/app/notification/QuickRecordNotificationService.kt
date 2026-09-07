@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.accounting.app.MainActivity
+import com.accounting.app.QuickRecordPopupActivity
 import com.accounting.app.data.local.pref.UserPreferences
 import com.accounting.app.log.AppLogger
 import com.accounting.app.util.AmountUtils
@@ -181,17 +182,20 @@ class QuickRecordNotificationService : NotificationListenerService() {
 
     private fun launchQuickRecord(requestId: String, amountFen: Long, title: String) {
         val carryTitle = title.ifBlank { "快捷记账" }
-        // Android 10+ 后台 startActivity 限制：从通知监听服务唤起 Activity 需悬浮窗权限豁免，
-        // 否则 startActivity 调用会被系统静默拦截（不抛异常但 Activity 不起来）。
+        // 注意：小卡片本身是普通透明 Activity（不是 TYPE_APPLICATION_OVERLAY 悬浮窗），
+        // 但 Android 10+ 从后台服务 startActivity 仍需 SYSTEM_ALERT_WINDOW 作为豁免
+        // （foregroundServiceType="specialUse" 不在后台启动豁免列表中）。
+        // 没有该权限时系统会静默拦截 startActivity（不抛异常但 Activity 不起来），
+        // 所以仍需检查 canDrawOverlays；没有权限时降级为提示用户去开启。
         if (!Settings.canDrawOverlays(applicationContext)) {
             AppLogger.w(
                 requestId, NODE,
-                "悬浮窗权限未开启，跳过唤起（Android 10+ 后台启动限制）: amount=${amountFen}分, merchant=$carryTitle"
+                "缺少 SYSTEM_ALERT_WINDOW 权限，无法从后台唤起小卡片: amount=${amountFen}分, merchant=$carryTitle"
             )
             return
         }
-        AppLogger.d(requestId, NODE, "唤起记账卡片: amount=${amountFen}分, merchant=$carryTitle")
-        val intent = Intent(this, MainActivity::class.java).apply {
+        AppLogger.d(requestId, NODE, "唤起记账小卡片: amount=${amountFen}分, merchant=$carryTitle")
+        val intent = Intent(this, QuickRecordPopupActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
             putExtra(MainActivity.EXTRA_QUICK_PAYMENT_AMOUNT, amountFen)
             putExtra(MainActivity.EXTRA_QUICK_PAYMENT_MERCHANT, carryTitle)

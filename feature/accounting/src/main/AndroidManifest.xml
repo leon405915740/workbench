@@ -17,6 +17,16 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.AccountingApp" />
 
+        <!-- 快捷记账小卡片：付款通知唤起的窄卡片弹窗。
+             使用单层透明主题 Theme.AccountingPopup；不设置 launchMode 保持默认 standard
+             （每条通知一个新实例，降低连续多条通知的状态复杂度）。
+             exported=false 仅应用内部显式启动。 -->
+        <activity
+            android:name="com.accounting.app.QuickRecordPopupActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.AccountingPopup" />
+
         <service
             android:name="com.accounting.app.notification.QuickRecordNotificationService"
             android:exported="true"

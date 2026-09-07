@@ -607,7 +607,8 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         sendMessage()
     }
 
-    /** 付款后唤起：根据通知解析出的金额/商家预填记账弹窗（type 固定支出） */
+    /** 付款后唤起：根据通知解析出的金额/商家预填记账弹窗（type 固定支出）。
+     *  category 默认 [CategoryConstants.DEFAULT_QUICK_PAYMENT_CATEGORY]（餐饮美食）。 */
     fun openPaymentQuickEntry(amount: Long, merchant: String?) {
         val label = merchant?.takeIf { it.isNotBlank() } ?: "快捷记账"
         val requestId = AppLogger.generateRequestId()
@@ -618,14 +619,14 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                 showEditDialog = EditDialogData(
                     recordId = null,
                     type = "expense",
-                    category = "",
+                    category = CategoryConstants.DEFAULT_QUICK_PAYMENT_CATEGORY,
                     subcategory = null,
                     merchant = label,
                     rawInput = label,
                     amount = amount,
                     time = TimeUtils.now(),
                     note = null,
-                    originalCategory = ""
+                    originalCategory = CategoryConstants.DEFAULT_QUICK_PAYMENT_CATEGORY
                 )
             )
         }
@@ -635,7 +636,8 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         type: String, amount: Long, category: String,
         merchant: String?, time: Long, note: String?, rawInput: String,
         pendingRequestId: String? = null,
-        attachmentPath: String? = null
+        attachmentPath: String? = null,
+        onSaved: ((recordId: Long) -> Unit)? = null,
     ) {
         // 手动记账：优先复用 AI 兜底透传的 requestId，否则单独生成
         val requestId = pendingRequestId ?: AppLogger.generateRequestId()
@@ -644,6 +646,9 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
 
         viewModelScope.launch {
             val billIndex = 1
+            // 所有子步骤串行执行（全部挂起等待）：
+            // insert 主记录 → 保存附件 → 记忆 upsert → mapping 双写 → UI 更新 → (可选) onSaved 回调
+            // 保证 popup 场景下 onSaved 不会早于附件/记忆完成。
             val recordId = try {
                 withContext(Dispatchers.IO) {
                     if (type == "expense") {
@@ -662,8 +667,16 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                 }
             } catch (e: Exception) {
                 AppLogger.e(requestId, "入库执行", "手动记账入库异常：${e.message}", e, billIndex)
+                // 主记录失败：置错误信号并直接返回，不关弹窗、不调 onSaved。
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "未知错误",
+                        toast = "记账失败"
+                    )
+                }
                 return@launch
             }
+            var attachmentOk = true
             if (attachmentPath != null) {
                 try {
                     withContext(Dispatchers.IO) {
@@ -674,34 +687,53 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                         }
                     }
                 } catch (e: Exception) {
+                    attachmentOk = false
                     AppLogger.e(requestId, "入库执行", "附件写入失败：${e.message}", e, billIndex)
+                    // 附件失败不视为"记账失败"：账单主记录已成功。只写错误提示。
+                    _uiState.update {
+                        it.copy(
+                            error = "附件保存失败：${e.message ?: "未知错误"}",
+                            toast = "记账成功，但附件保存失败"
+                        )
+                    }
                 }
             }
             val triggerWord = extractTriggerWord(merchant)
             if (triggerWord != null) {
-                withContext(Dispatchers.IO) {
-                    repository.upsertMemory(CategoryMemoryEntity(
-                        triggerWord = triggerWord, type = type,
-                        category = category, subcategory = null,
-                        source = "auto",
-                        createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
-                    ), requestId)
+                // 记忆与 mapping 异常已有 AppLogger，不阻断主流程。
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        repository.upsertMemory(CategoryMemoryEntity(
+                            triggerWord = triggerWord, type = type,
+                            category = category, subcategory = null,
+                            source = "auto",
+                            createdAt = TimeUtils.now(), updatedAt = TimeUtils.now()
+                        ), requestId)
+                    }
                 }
                 // 双写：同步写入 category_mapping 表（失败仅记 WARNING，不打断用户「记账成功」体验）
                 writeCategoryMappingSafely(requestId, "手动记账", triggerWord, type, category)
             }
             _uiState.update {
-                it.copy(
-                    messages = it.messages + ChatMessage.CardMessage(
+                // 若附件失败已写过 toast/error，保持其提示文案，不覆盖成通用"记账成功"。
+                val state = it
+                val newToast = if (attachmentOk) "记账成功" else state.toast
+                val newError = if (attachmentOk) null else state.error
+                state.copy(
+                    messages = state.messages + ChatMessage.CardMessage(
                         recordId = recordId, type = type, amount = amount,
                         category = category, subcategory = null,
                         merchant = merchant, recordTime = time,
                         note = note, confidence = 1.0f, matchedMemory = false,
                         rawInput = rawInput, source = "manual", timestamp = TimeUtils.now()
                     ),
-                    showEditDialog = null, toast = "记账成功"
+                    showEditDialog = null,
+                    toast = newToast,
+                    error = newError,
                 )
             }
+            // 所有"成功"子步骤完成后再回调，确保 finish() 不会打断后续操作。
+            onSaved?.invoke(recordId)
         }
     }
 

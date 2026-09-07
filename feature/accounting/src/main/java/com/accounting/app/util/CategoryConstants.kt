@@ -9,6 +9,12 @@ package com.accounting.app.util
  */
 object CategoryConstants {
 
+    /**
+     * 付款通知快捷记账的默认分类。独立于 expenseCategories 列表的索引，
+     * 避免后续分类顺序调整导致默认值悄悄漂移。
+     */
+    const val DEFAULT_QUICK_PAYMENT_CATEGORY = "餐饮美食"
+
     val expenseCategories = listOf(
         "餐饮美食", "交通出行", "日用家居", "娱乐休闲", "服饰美容",
         "住房房租", "通讯资费", "医疗健康", "教育学习", "人情往来",

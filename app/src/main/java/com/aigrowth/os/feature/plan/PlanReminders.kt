@@ -111,7 +111,7 @@ object PlanReminders {
         )
         val notification = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("今日计划提醒")
+            .setContentTitle("待办事项提醒")
             .setContentText(title)
             .setCategory(Notification.CATEGORY_REMINDER)
             .setContentIntent(openApp)
@@ -127,7 +127,7 @@ object PlanReminders {
     private fun ensureChannel(notificationManager: NotificationManager) {
         if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
             notificationManager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "今日计划提醒", NotificationManager.IMPORTANCE_HIGH)
+                NotificationChannel(CHANNEL_ID, "待办事项提醒", NotificationManager.IMPORTANCE_HIGH)
             )
         }
     }
