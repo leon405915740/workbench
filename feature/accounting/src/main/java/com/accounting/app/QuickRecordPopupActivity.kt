@@ -163,7 +163,8 @@ private fun QuickRecordPopupRoot(
                 onDeleteRequest = {
                     // popup 永远是新建模式，没有删除按钮，留空实现。
                 },
-                widthFraction = 0.92f
+                widthFraction = 0.92f,
+                quickMode = true
             )
         }
     } else {

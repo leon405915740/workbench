@@ -13,8 +13,8 @@ android {
         applicationId = "com.aigrowth.os"
         minSdk = 26
         targetSdk = 34
-        versionCode = 15
-        versionName = "1.10.1"
+        versionCode = 17
+        versionName = "1.10.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

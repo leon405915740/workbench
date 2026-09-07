@@ -1,0 +1,7 @@
+﻿<resources>
+    <color name="quick_card_white">#FFFFFFFF</color>
+    <color name="quick_card_gray">#FFF5F5F5</color>
+    <color name="quick_card_green">#FF07C160</color>
+    <color name="quick_card_text_primary">#FF1A1A1A</color>
+    <color name="quick_card_text_secondary">#FF8E8E93</color>
+</resources>

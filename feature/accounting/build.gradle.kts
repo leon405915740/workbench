@@ -90,3 +90,10 @@ dependencies {
     androidTestImplementation(platform(composeBom))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
+
+// Kotlin 编译器把单元测试类输出到 build/tmp/kotlin-classes/debugUnitTest，
+// 但 AGP 的 test classpath 期望在 build/classes/kotlin/debugUnitTest，导致 ClassNotFoundException。
+// 手动补上输出目录，ponytail: 根因是 Kotlin 1.9.22 + AGP 8.2.2 的输出目录约定差异。
+tasks.withType<Test>().configureEach {
+    classpath += files(layout.buildDirectory.dir("tmp/kotlin-classes/debugUnitTest"))
+}

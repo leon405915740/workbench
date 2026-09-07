@@ -39,13 +39,15 @@ object AmountUtils {
      * 第三类仅匹配两位小数的裸数字（支付通知金额几乎都带两位小数），避免误吃订单号/日期。
      */
     fun extractFenFromAmountText(text: String): Long? {
-        Regex("""(¥|￥)\s*(\d+(?:\.\d+)?)""").find(text)?.let {
+        // 去掉千分位逗号（如 1,829.97 → 1829.97），否则 \d+ 会从逗号后开始匹配导致金额截断
+        val normalized = text.replace(Regex("""(?<=\d),(?=\d)"""), "")
+        Regex("""(¥|￥)\s*(\d+(?:\.\d+)?)""").find(normalized)?.let {
             return yuanToFenOrNull(it.groupValues[2])
         }
-        Regex("""(\d+(?:\.\d+)?)\s*元""").find(text)?.let {
+        Regex("""(\d+(?:\.\d+)?)\s*元""").find(normalized)?.let {
             return yuanToFenOrNull(it.groupValues[1])
         }
-        Regex("""(\d+\.\d{2})""").find(text)?.let {
+        Regex("""(\d+\.\d{2})""").find(normalized)?.let {
             return yuanToFenOrNull(it.groupValues[1])
         }
         return null

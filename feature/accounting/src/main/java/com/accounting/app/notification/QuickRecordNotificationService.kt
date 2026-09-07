@@ -38,6 +38,25 @@ internal fun hasExpenseDirection(content: String): Boolean =
     EXPENSE_KEYWORDS.any(content::contains) && NON_EXPENSE_KEYWORDS.none(content::contains)
 
 /**
+ * 从支付通知正文提取商户名（如「财付通付款存入」→「财付通」、「在星巴克消费」→「星巴克」）。
+ * 提取不到时返回 null，由调用方回退到通知 title。
+ */
+internal fun extractMerchant(content: String): String? {
+    // 商户名限制为中文/字母（排除数字、冒号等，避免把「10:58财付通」的前缀吃进商户名）
+    val merchant = """[\u4e00-\u9fa5A-Za-z]{2,20}"""
+    val patterns = listOf(
+        Regex("""在($merchant)(?:消费|支付|扣款|付款)"""),
+        Regex("""($merchant)付款(?:存入|成功)?"""),
+        Regex("""支付给($merchant)"""),
+        Regex("""向($merchant)支付""")
+    )
+    for (p in patterns) {
+        p.find(content)?.let { return it.groupValues[1] }
+    }
+    return null
+}
+
+/**
  * 通知栏监听：付款后自动唤起记账卡片。
  *
  * 监听微信/支付宝/云闪付等支付应用的「支付成功/付款」通知，解析金额后
@@ -173,37 +192,28 @@ class QuickRecordNotificationService : NotificationListenerService() {
                     AppLogger.d(requestId, NODE, "快捷记账已关闭，跳过: amount=${amountFen}分")
                     return@launch
                 }
-                launchQuickRecord(requestId, amountFen, title)
+                // 商户名优先从正文提取（如「财付通付款」），提取不到再回退到通知 title
+                val merchant = extractMerchant(full) ?: title
+                launchQuickRecord(requestId, amountFen, merchant)
             } catch (e: Exception) {
                 AppLogger.e(requestId, NODE, "读取开关异常: ${e.message}", e)
             }
         }
     }
 
-    private fun launchQuickRecord(requestId: String, amountFen: Long, title: String) {
-        val carryTitle = title.ifBlank { "快捷记账" }
-        // 注意：小卡片本身是普通透明 Activity（不是 TYPE_APPLICATION_OVERLAY 悬浮窗），
-        // 但 Android 10+ 从后台服务 startActivity 仍需 SYSTEM_ALERT_WINDOW 作为豁免
-        // （foregroundServiceType="specialUse" 不在后台启动豁免列表中）。
-        // 没有该权限时系统会静默拦截 startActivity（不抛异常但 Activity 不起来），
-        // 所以仍需检查 canDrawOverlays；没有权限时降级为提示用户去开启。
+    private fun launchQuickRecord(requestId: String, amountFen: Long, merchant: String) {
+        val carryMerchant = merchant.ifBlank { "快捷记账" }
         if (!Settings.canDrawOverlays(applicationContext)) {
-            AppLogger.w(
-                requestId, NODE,
-                "缺少 SYSTEM_ALERT_WINDOW 权限，无法从后台唤起小卡片: amount=${amountFen}分, merchant=$carryTitle"
-            )
+            AppLogger.w(requestId, NODE,
+                "缺少 SYSTEM_ALERT_WINDOW 权限，无法弹出悬浮窗: amount=${amountFen}分, merchant=$carryMerchant")
             return
         }
-        AppLogger.d(requestId, NODE, "唤起记账小卡片: amount=${amountFen}分, merchant=$carryTitle")
-        val intent = Intent(this, QuickRecordPopupActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra(MainActivity.EXTRA_QUICK_PAYMENT_AMOUNT, amountFen)
-            putExtra(MainActivity.EXTRA_QUICK_PAYMENT_MERCHANT, carryTitle)
-        }
+        AppLogger.d(requestId, NODE, "弹出全局悬浮窗: amount=${amountFen}分, merchant=$carryMerchant")
         try {
-            startActivity(intent)
+            com.accounting.app.QuickRecordFloatWindow.getInstance()
+                .show(applicationContext, amountFen, carryMerchant)
         } catch (e: Exception) {
-            AppLogger.e(requestId, NODE, "唤起记账异常: ${e.message}", e)
+            AppLogger.e(requestId, NODE, "弹出悬浮窗异常: ${e.message}", e)
         }
     }
 

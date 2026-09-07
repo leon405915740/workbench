@@ -93,6 +93,7 @@ import java.util.Calendar
  * @param onEditConfirm   编辑模式提交回调
  * @param onDismiss       关闭弹窗
  * @param onDeleteRequest 编辑模式点击删除回调（二次确认由外层 MainActivity 控制）
+ * @param quickMode 快捷记账模式（付款通知唤起）：隐藏收支切换/时间/附件，标题「快捷记账」
  */
 @Composable
 fun EditRecordDialog(
@@ -102,6 +103,7 @@ fun EditRecordDialog(
     onDismiss: () -> Unit,
     onDeleteRequest: () -> Unit,
     widthFraction: Float = 1f,
+    quickMode: Boolean = false,
 ) {
     val context = LocalContext.current
     val isEditMode = data.recordId != null
@@ -177,7 +179,11 @@ fun EditRecordDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isEditMode) "编辑账单" else "手动记账",
+                        text = when {
+                            isEditMode -> "编辑账单"
+                            quickMode -> "快捷记账"
+                            else -> "手动记账"
+                        },
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary
@@ -193,7 +199,7 @@ fun EditRecordDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 收支类型：编辑模式只读标签，新建模式可切换 Tab
+                // 收支类型：编辑模式只读标签，新建模式可切换 Tab；快捷模式固定支出不渲染
                 if (isEditMode) {
                     Box(
                         modifier = Modifier
@@ -210,7 +216,8 @@ fun EditRecordDialog(
                             fontWeight = FontWeight.Medium
                         )
                     }
-                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else if (!quickMode) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -240,9 +247,8 @@ fun EditRecordDialog(
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 // 表单区（可滚动）
                 Column(
@@ -286,21 +292,23 @@ fun EditRecordDialog(
                         )
                     }
 
-                    // 时间选择（点击弹出 DatePicker + TimePicker）
-                    FieldLabel("时间")
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(BackgroundGray)
-                            .clickable { showDatePicker = true }
-                            .padding(horizontal = 12.dp, vertical = 14.dp)
-                    ) {
-                        Text(
-                            text = TimeUtils.formatTime(timeMillis),
-                            fontSize = 14.sp,
-                            color = TextPrimary
-                        )
+                    // 时间选择（快捷模式不展示，固定使用当前时间）
+                    if (!quickMode) {
+                        FieldLabel("时间")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(BackgroundGray)
+                                .clickable { showDatePicker = true }
+                                .padding(horizontal = 12.dp, vertical = 14.dp)
+                        ) {
+                            Text(
+                                text = TimeUtils.formatTime(timeMillis),
+                                fontSize = 14.sp,
+                                color = TextPrimary
+                            )
+                        }
                     }
 
                     // 商家输入（选填）
@@ -336,53 +344,55 @@ fun EditRecordDialog(
                         )
                     )
 
-                    // 凭证图片（选填，最多一张；用于留存小票/发票原图）
-                    Spacer(modifier = Modifier.height(6.dp))
-                    FieldLabel("凭证图片（选填）")
-                    val pickPhoto = {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    }
-                    if (attachmentPath == null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(BackgroundGray)
-                                .clickable { pickPhoto() }
-                                .padding(vertical = 20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Add, contentDescription = null, tint = WeChatGreen)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("添加凭证图片（小票 / 发票）", fontSize = 13.sp, color = TextSecondary)
-                            }
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AttachmentThumbnail(
-                                path = attachmentPath!!,
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                    // 凭证图片（快捷模式不展示）
+                    if (!quickMode) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        FieldLabel("凭证图片（选填）")
+                        val pickPhoto = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                TextButton(onClick = { pickPhoto() }) {
-                                    Text("更换图片", fontSize = 13.sp, color = WeChatGreen)
+                        }
+                        if (attachmentPath == null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(BackgroundGray)
+                                    .clickable { pickPhoto() }
+                                    .padding(vertical = 20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Add, contentDescription = null, tint = WeChatGreen)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("添加凭证图片（小票 / 发票）", fontSize = 13.sp, color = TextSecondary)
                                 }
-                                TextButton(onClick = {
-                                    // 仅清理本会话新落的临时文件；原附件由 Repository 在提交时统一清理
-                                    tempFilePath?.let { AttachmentStore.delete(context, it) }
-                                    tempFilePath = null
-                                    attachmentPath = null
-                                }) {
-                                    Text("删除图片", fontSize = 13.sp, color = TextDelete)
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AttachmentThumbnail(
+                                    path = attachmentPath!!,
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    TextButton(onClick = { pickPhoto() }) {
+                                        Text("更换图片", fontSize = 13.sp, color = WeChatGreen)
+                                    }
+                                    TextButton(onClick = {
+                                        // 仅清理本会话新落的临时文件；原附件由 Repository 在提交时统一清理
+                                        tempFilePath?.let { AttachmentStore.delete(context, it) }
+                                        tempFilePath = null
+                                        attachmentPath = null
+                                    }) {
+                                        Text("删除图片", fontSize = 13.sp, color = TextDelete)
+                                    }
                                 }
                             }
                         }
